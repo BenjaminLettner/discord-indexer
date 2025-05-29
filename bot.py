@@ -357,9 +357,9 @@ async def index_command(interaction: discord.Interaction):
         )
         await interaction.followup.send(embed=error_embed)
 
-@bot.tree.command(name="dashboard", description="Get the web dashboard link and login information")
+@bot.tree.command(name="dashboard", description="Get the web dashboard link")
 async def dashboard_command(interaction: discord.Interaction):
-    """Provide dashboard link and login information"""
+    """Provide dashboard link"""
     await interaction.response.defer()
     
     embed = discord.Embed(
@@ -374,17 +374,9 @@ async def dashboard_command(interaction: discord.Interaction):
         inline=False
     )
     
-
-    
     embed.add_field(
         name="📋 Features",
         value="• Browse indexed files and links\n• View server statistics\n• Search through indexed content\n• Download files",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="ℹ️ Note",
-        value="Change the default password after first login for security.",
         inline=False
     )
     
