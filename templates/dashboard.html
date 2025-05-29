@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DataChad{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshStats()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Files</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.total_files or 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Links</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.total_links or 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-link fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Files (24h)</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.files_24h or 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Links (24h)</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.links_24h or 0) }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Top File Types -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-file-alt"></i> Top File Types
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if stats.top_file_types %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>File Type</th>
+                                    <th class="text-end">Count</th>
+                                    <th class="text-end">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file_type, count in stats.top_file_types %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ file_type or 'Unknown' }}</span>
+                                    </td>
+                                    <td class="text-end">{{ "{:,}".format(count) }}</td>
+                                    <td class="text-end">
+                                        {% if stats.total_files > 0 %}
+                                            {{ "%.1f"|format((count / stats.total_files) * 100) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No file types data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Domains -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-globe"></i> Top Domains
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if stats.top_domains %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th class="text-end">Count</th>
+                                    <th class="text-end">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for domain, count in stats.top_domains %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">{{ domain or 'Unknown' }}</span>
+                                    </td>
+                                    <td class="text-end">{{ "{:,}".format(count) }}</td>
+                                    <td class="text-end">
+                                        {% if stats.total_links > 0 %}
+                                            {{ "%.1f"|format((count / stats.total_links) * 100) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No domains data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('files') }}" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-file"></i><br>
+                            <small>Browse Files</small>
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <a href="{{ url_for('links') }}" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-link"></i><br>
+                            <small>Browse Links</small>
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-success btn-lg w-100" onclick="refreshStats()">
+                            <i class="fas fa-sync-alt"></i><br>
+                            <small>Refresh Data</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshStats() {
+    // Show loading indicator
+    const refreshBtn = document.querySelector('button[onclick="refreshStats()"]');
+    const originalContent = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><br><small>Refreshing...</small>';
+    refreshBtn.disabled = true;
+    
+    // Reload the page after a short delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update statistics without full page reload
+            console.log('Stats updated:', data);
+        })
+        .catch(error => {
+            console.error('Error fetching stats:', error);
+        });
+}, 30000);
+</script>
+{% endblock %}

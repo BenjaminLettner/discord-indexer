@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service - DataChad{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2"><i class="fas fa-file-contract me-2"></i>Terms of Service</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <p class="text-muted"><strong>Last Updated:</strong> May 29, 2025</p>
+                    </div>
+                    
+                    <div class="terms-content">
+                        <h3>1. Acceptance of Terms</h3>
+                        <p>By accessing and using the Discord Indexer service ("DataChad"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+                        
+                        <h3>2. Description of Service</h3>
+                        <p>Discord Indexer is a service that indexes and organizes files and links shared in Discord servers. The service provides:</p>
+                        <ul>
+                            <li>Automated indexing of files and links from Discord messages</li>
+                            <li>Web-based interface for browsing indexed content</li>
+                            <li>Search functionality for finding specific files or links</li>
+                            <li>Statistics and analytics about indexed content</li>
+                        </ul>
+                        
+                        <h3>3. User Responsibilities</h3>
+                        <p>As a user of this service, you agree to:</p>
+                        <ul>
+                            <li>Use the service only for lawful purposes</li>
+                            <li>Not attempt to gain unauthorized access to any part of the service</li>
+                            <li>Not use the service to store, share, or distribute illegal content</li>
+                            <li>Respect the intellectual property rights of others</li>
+                            <li>Keep your login credentials secure and confidential</li>
+                            <li>Report any security vulnerabilities or abuse to the service administrators</li>
+                        </ul>
+                        
+                        <h3>4. Data Collection and Usage</h3>
+                        <p>The service collects and processes the following data:</p>
+                        <ul>
+                            <li>Discord message content containing files and links</li>
+                            <li>File metadata (name, size, type, upload date)</li>
+                            <li>Link URLs and associated metadata</li>
+                            <li>User information (Discord usernames, user IDs)</li>
+                            <li>Server information (server names, channel names)</li>
+                        </ul>
+                        <p>This data is used solely for the purpose of providing the indexing service and is not shared with third parties without explicit consent.</p>
+                        
+                        <h3>5. Content Ownership</h3>
+                        <p>You retain ownership of any content you upload or share through Discord that is indexed by this service. The service does not claim ownership of your content but requires a license to:</p>
+                        <ul>
+                            <li>Index and store your content for service functionality</li>
+                            <li>Display your content through the web interface</li>
+                            <li>Provide search and organizational features</li>
+                        </ul>
+                        
+                        <h3>6. Privacy and Security</h3>
+                        <p>We are committed to protecting your privacy and maintaining the security of your data. Please refer to our <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a> for detailed information about how we collect, use, and protect your information.</p>
+                        
+                        <h3>7. Service Availability</h3>
+                        <p>While we strive to maintain high availability, the service is provided "as is" without guarantees of:</p>
+                        <ul>
+                            <li>Continuous, uninterrupted access</li>
+                            <li>Error-free operation</li>
+                            <li>Data backup or recovery</li>
+                            <li>Compatibility with all systems or browsers</li>
+                        </ul>
+                        
+                        <h3>8. Prohibited Activities</h3>
+                        <p>The following activities are strictly prohibited:</p>
+                        <ul>
+                            <li>Attempting to reverse engineer or decompile the service</li>
+                            <li>Using automated tools to scrape or download large amounts of data</li>
+                            <li>Sharing login credentials with unauthorized users</li>
+                            <li>Using the service to distribute malware or malicious content</li>
+                            <li>Violating any applicable laws or regulations</li>
+                        </ul>
+                        
+                        <h3>9. Limitation of Liability</h3>
+                        <p>To the fullest extent permitted by law, the service providers shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to:</p>
+                        <ul>
+                            <li>Loss of data or content</li>
+                            <li>Business interruption</li>
+                            <li>Loss of profits or revenue</li>
+                            <li>System downtime or unavailability</li>
+                        </ul>
+                        
+                        <h3>10. Termination</h3>
+                        <p>We reserve the right to terminate or suspend access to the service at any time, with or without notice, for any reason including but not limited to:</p>
+                        <ul>
+                            <li>Violation of these terms of service</li>
+                            <li>Suspected fraudulent or illegal activity</li>
+                            <li>Technical or security concerns</li>
+                            <li>Discontinuation of the service</li>
+                        </ul>
+                        
+                        <h3>11. Changes to Terms</h3>
+                        <p>We reserve the right to modify these terms at any time. Users will be notified of significant changes through the service interface. Continued use of the service after changes constitutes acceptance of the new terms.</p>
+                        
+                        <h3>12. Governing Law</h3>
+                        <p>These terms shall be governed by and construed in accordance with applicable local laws. Any disputes arising from these terms or the use of the service shall be resolved through appropriate legal channels.</p>
+                        
+                        <h3>13. Contact Information</h3>
+                        <p>If you have any questions about these Terms of Service, please contact the service administrators through the appropriate Discord channels or support mechanisms.</p>
+                        
+                        <div class="alert alert-info mt-4">
+                            <h5><i class="fas fa-info-circle me-2"></i>Important Notice</h5>
+                            <p class="mb-0">By using this service, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you must discontinue use of the service immediately.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.terms-content h3 {
+    color: #0099cc;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.terms-content h3:first-child {
+    margin-top: 0;
+}
+
+.terms-content p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.terms-content ul {
+    margin-bottom: 1.5rem;
+}
+
+.terms-content li {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.alert-info {
+    border-left: 4px solid #0099cc;
+}
+</style>
+{% endblock %}

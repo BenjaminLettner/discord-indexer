@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Login - DataChad{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <img src="{{ url_for('static', filename='DataChad.png') }}" alt="DataChad" class="cyber-icon mb-3" style="width: 64px; height: 64px;">
+                        <h2 class="card-title">DataChad</h2>
+                        <p class="text-muted">Sign in to access the dashboard</p>
+                    </div>
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user"></i> Username
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock"></i> Password
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Remember me
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Sign In
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Footer links -->
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            <a href="{{ url_for('terms_of_service') }}" class="text-decoration-none me-3">
+                                <i class="fas fa-file-contract"></i> Terms of Service
+                            </a>
+                            <a href="{{ url_for('privacy_policy') }}" class="text-decoration-none">
+                                <i class="fas fa-shield-alt"></i> Privacy Policy
+                            </a>
+                        </small>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+body {
+    background: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0f1419 100%);
+    min-height: 100vh;
+}
+
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+.card {
+    border-radius: 1rem;
+    background: rgba(26, 35, 50, 0.95);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
+}
+
+.card-title {
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.text-muted {
+    color: #8892b0 !important;
+}
+
+.form-label {
+    color: #ccd6f6;
+}
+
+.form-control {
+    background: rgba(15, 20, 25, 0.8);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    color: #ccd6f6;
+}
+
+.form-control:focus {
+    background: rgba(15, 20, 25, 0.9);
+    border-color: #00ffff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: #8892b0;
+}
+
+.form-check-label {
+    color: #ccd6f6;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0066cc 0%, #00ffff 100%);
+    border: none;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0080ff 0%, #66ffff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+}
+
+.cyber-icon {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
+    transition: all 0.3s ease;
+}
+
+.cyber-icon:hover {
+    filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1));
+    transform: scale(1.05);
+}
+
+.text-muted a {
+    color: #8892b0 !important;
+    transition: color 0.3s ease;
+}
+
+.text-muted a:hover {
+    color: #00ffff !important;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+</style>
+{% endblock %}

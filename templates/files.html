@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Files - DataChad{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-file"></i> Indexed Files</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <span class="badge bg-primary fs-6">{{ "{:,}".format(total) }} files</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search }}" placeholder="Search by filename, content, or author...">
+            </div>
+            <div class="col-md-4">
+                <label for="type" class="form-label">File Type</label>
+                <input type="text" class="form-control" id="type" name="type" 
+                       value="{{ file_type }}" placeholder="e.g., image/png, application/pdf">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% if search or file_type %}
+        <div class="mt-2">
+            <a href="{{ url_for('files') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Files Table -->
+<div class="card">
+    <div class="card-body">
+        {% if files %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Author</th>
+                        <th>Channel</th>
+                        <th>Size</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="file-icon me-2">
+                                    {% if file[8] and 'image' in file[8] %}
+                                        <div class="image-preview-container" style="position: relative;">
+                                            <img src="{{ file[6] }}" alt="{{ file[5] }}" 
+                                                 class="image-thumbnail" 
+                                                 style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;"
+                                                 onclick="showImagePreview('{{ file[6] }}', '{{ file[5] }}')" 
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
+                                                 title="Click to preview">
+                                            <i class="fas fa-image text-success" style="display: none;"></i>
+                                        </div>
+                                    {% elif file[8] and 'video' in file[8] %}
+                                        <i class="fas fa-video text-danger"></i>
+                                    {% elif file[8] and 'audio' in file[8] %}
+                                        <i class="fas fa-music text-info"></i>
+                                    {% elif file[8] and 'pdf' in file[8] %}
+                                        <i class="fas fa-file-pdf text-danger"></i>
+                                    {% elif file[8] and 'zip' in file[8] %}
+                                        <i class="fas fa-file-archive text-warning"></i>
+                                    {% else %}
+                                        <i class="fas fa-file text-secondary"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="fw-bold truncate" title="{{ file[5] }}">{{ file[5] }}</div>
+                                    {% if file[9] %}
+                                        <small class="text-muted truncate" title="{{ file[9] }}">{{ file[9][:100] }}...</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ file[4] }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-bold">{{ file[2] or 'Unknown' }}</div>
+                                {% if file[3] %}
+                                    <small class="text-muted">{{ file[3] }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if file[7] %}
+                                <span class="badge bg-info">{{ file[7] | filesize }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if file[8] %}
+                                <span class="badge bg-secondary">{{ file[8].split('/')[-1] if '/' in file[8] else file[8] }}</span>
+                            {% else %}
+                                <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-bold">{{ file[10][:10] if file[10] else 'Unknown' }}</div>
+                                <small class="text-muted">{{ file[10][11:19] if file[10] and file[10]|length > 19 else '' }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ file[6] }}" target="_blank" class="btn btn-outline-primary btn-sm" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-outline-info btn-sm" onclick="showFileDetails({{ file[0] }});" title="Details">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Files pagination">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('files', page=page-1, search=search, type=file_type) }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ p }}</span>
+                        </li>
+                    {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('files', page=p, search=search, type=file_type) }}">{{ p }}</a>
+                        </li>
+                    {% elif p == 4 or p == total_pages - 3 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('files', page=page+1, search=search, type=file_type) }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No files found</h5>
+            <p class="text-muted">Try adjusting your search criteria or check if the bot is indexing files.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- File Details Modal -->
+<div class="modal fade" id="fileDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">File Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="fileDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-white" id="imagePreviewModalLabel">Image Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="previewImage" src="" alt="" class="img-fluid" style="max-height: 70vh; width: auto;">
+            </div>
+            <div class="modal-footer border-secondary justify-content-between">
+                <span id="imageFileName" class="text-white"></span>
+                <div>
+                    <a id="downloadImageBtn" href="" target="_blank" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showFileDetails(fileId) {
+    // Show loading state
+    document.getElementById('fileDetailsContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading file details...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('fileDetailsModal'));
+    modal.show();
+    
+    // Fetch file details from API
+    fetch(`/api/file/${fileId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Format file size
+            const formatFileSize = (bytes) => {
+                if (!bytes) return 'Unknown';
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                if (bytes === 0) return '0 Bytes';
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+            };
+            
+            // Format date
+            const formatDate = (dateString) => {
+                if (!dateString) return 'Unknown';
+                return new Date(dateString).toLocaleString();
+            };
+            
+            // Create file details HTML
+            const detailsHtml = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-file"></i> File Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Filename:</td>
+                                <td>${data.filename || 'Unknown'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">File Type:</td>
+                                <td><span class="badge bg-info">${data.file_type || 'Unknown'}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">File Size:</td>
+                                <td>${formatFileSize(data.file_size)}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">File URL:</td>
+                                <td><a href="${data.file_url}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt"></i> Open</a></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-user"></i> Discord Context</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Author:</td>
+                                <td><span class="badge bg-light text-dark">${data.author_name || 'Unknown'}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Channel:</td>
+                                <td>${data.channel_name || 'Unknown'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Guild:</td>
+                                <td>${data.guild_name || 'Unknown'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Message ID:</td>
+                                <td><code class="small">${data.message_id || 'Unknown'}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-warning"><i class="fas fa-clock"></i> Timestamps</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Original Date:</td>
+                                <td>${formatDate(data.timestamp)}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Indexed At:</td>
+                                <td>${formatDate(data.indexed_at)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                ${data.message_content ? `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-info"><i class="fas fa-comment"></i> Message Content</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <p class="card-text">${data.message_content}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-secondary"><i class="fas fa-info-circle"></i> Technical Details</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Database ID:</td>
+                                <td><code>${data.id}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Channel ID:</td>
+                                <td><code class="small">${data.channel_id || 'Unknown'}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Author ID:</td>
+                                <td><code class="small">${data.author_id || 'Unknown'}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Guild ID:</td>
+                                <td><code class="small">${data.guild_id || 'Unknown'}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('fileDetailsContent').innerHTML = detailsHtml;
+        })
+        .catch(error => {
+            console.error('Error fetching file details:', error);
+            document.getElementById('fileDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading file details: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function showImagePreview(imageUrl, fileName) {
+    const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+    const previewImage = document.getElementById('previewImage');
+    const imageFileNameSpan = document.getElementById('imageFileName');
+    const downloadBtn = document.getElementById('downloadImageBtn');
+    
+    // Set image source and filename
+    previewImage.src = imageUrl;
+    previewImage.alt = fileName;
+    imageFileNameSpan.textContent = fileName;
+    downloadBtn.href = imageUrl;
+    
+    // Show loading state
+    previewImage.style.opacity = '0.5';
+    
+    // Handle image load
+    previewImage.onload = function() {
+        previewImage.style.opacity = '1';
+    };
+    
+    // Handle image error
+    previewImage.onerror = function() {
+        previewImage.style.opacity = '1';
+        previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';
+        previewImage.alt = 'Image not available';
+    };
+    
+    modal.show();
+}
+
+// Auto-submit search form on Enter
+document.getElementById('search').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+
+document.getElementById('type').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+</script>
+{% endblock %}

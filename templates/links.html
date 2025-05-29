@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Links - DataChad{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-link"></i> Indexed Links</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <span class="badge bg-primary fs-6">{{ "{:,}".format(total) }} links</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ search }}" placeholder="Search by URL, content, or author...">
+            </div>
+            <div class="col-md-4">
+                <label for="domain" class="form-label">Domain</label>
+                <input type="text" class="form-control" id="domain" name="domain" 
+                       value="{{ domain }}" placeholder="e.g., youtube.com, github.com">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% if search or domain %}
+        <div class="mt-2">
+            <a href="{{ url_for('links') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Links Table -->
+<div class="card">
+    <div class="card-body">
+        {% if links %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Link</th>
+                        <th>Author</th>
+                        <th>Channel</th>
+                        <th>Domain</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in links %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="link-icon me-2">
+                                    {% if 'youtube.com' in (link[6] or '') or 'youtu.be' in (link[6] or '') %}
+                                        <i class="fab fa-youtube text-danger"></i>
+                                    {% elif 'github.com' in (link[6] or '') %}
+                                        <i class="fab fa-github text-dark"></i>
+                                    {% elif 'twitter.com' in (link[6] or '') or 'x.com' in (link[6] or '') %}
+                                        <i class="fab fa-twitter text-info"></i>
+                                    {% elif 'discord.com' in (link[6] or '') or 'discord.gg' in (link[6] or '') %}
+                                        <i class="fab fa-discord text-primary"></i>
+                                    {% elif 'reddit.com' in (link[6] or '') %}
+                                        <i class="fab fa-reddit text-warning"></i>
+                                    {% elif 'imgur.com' in (link[6] or '') %}
+                                        <i class="fas fa-image text-success"></i>
+                                    {% else %}
+                                        <i class="fas fa-external-link-alt text-secondary"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold truncate" title="{{ link[5] }}">
+                                        {{ link[5][:80] }}{% if link[5]|length > 80 %}...{% endif %}
+                                    </div>
+                                    {% if link[7] %}
+                                        <small class="text-muted truncate" title="{{ link[7] }}">{{ link[7][:100] }}{% if link[7]|length > 100 %}...{% endif %}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ link[4] }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-bold">{{ link[2] or 'Unknown' }}</div>
+                                {% if link[3] %}
+                                    <small class="text-muted">{{ link[3] }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if link[6] %}
+                                <span class="badge bg-info">{{ link[6] }}</span>
+                            {% else %}
+                                <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-bold">{{ link[8][:10] if link[8] else 'Unknown' }}</div>
+                                <small class="text-muted">{{ link[8][11:19] if link[8] and link[8]|length > 19 else '' }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ link[5] }}" target="_blank" class="btn btn-outline-primary btn-sm" title="Open Link">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button class="btn btn-outline-info btn-sm" onclick="showLinkDetails('{{ link[0] }}')" title="Details">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{ link[5] }}')" title="Copy URL">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Links pagination">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('links', page=page-1, search=search, domain=domain) }}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ p }}</span>
+                        </li>
+                    {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('links', page=p, search=search, domain=domain) }}">{{ p }}</a>
+                        </li>
+                    {% elif p == 4 or p == total_pages - 3 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('links', page=page+1, search=search, domain=domain) }}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-link fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No links found</h5>
+            <p class="text-muted">Try adjusting your search criteria or check if the bot is indexing links.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Link Details Modal -->
+<div class="modal fade" id="linkDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Link Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="linkDetailsContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast for copy notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="copyToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-copy text-success me-2"></i>
+            <strong class="me-auto">Copied!</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            URL copied to clipboard
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showLinkDetails(linkId) {
+    // Show loading state
+    document.getElementById('linkDetailsContent').innerHTML = `
+        <div class="text-center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p>Loading link details...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('linkDetailsModal'));
+    modal.show();
+    
+    // Fetch link details from API
+    fetch(`/api/link/${linkId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            // Format date
+            const formatDate = (dateString) => {
+                if (!dateString) return 'Unknown';
+                return new Date(dateString).toLocaleString();
+            };
+            
+            // Get domain icon
+            const getDomainIcon = (domain) => {
+                if (!domain) return '<i class="fas fa-external-link-alt text-secondary"></i>';
+                if (domain.includes('youtube.com') || domain.includes('youtu.be')) {
+                    return '<i class="fab fa-youtube text-danger"></i>';
+                } else if (domain.includes('github.com')) {
+                    return '<i class="fab fa-github text-dark"></i>';
+                } else if (domain.includes('twitter.com') || domain.includes('x.com')) {
+                    return '<i class="fab fa-twitter text-info"></i>';
+                } else if (domain.includes('discord.com') || domain.includes('discord.gg')) {
+                    return '<i class="fab fa-discord text-primary"></i>';
+                } else if (domain.includes('reddit.com')) {
+                    return '<i class="fab fa-reddit text-warning"></i>';
+                } else if (domain.includes('imgur.com')) {
+                    return '<i class="fas fa-image text-success"></i>';
+                } else {
+                    return '<i class="fas fa-external-link-alt text-secondary"></i>';
+                }
+            };
+            
+            // Create link details HTML
+            const detailsHtml = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-link"></i> Link Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">URL:</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        ${getDomainIcon(data.link_domain)}
+                                        <a href="${data.link_url}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                            <i class="fas fa-external-link-alt"></i> Open Link
+                                        </a>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">${data.link_url}</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Domain:</td>
+                                <td><span class="badge bg-info">${data.link_domain || 'Unknown'}</span></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-user"></i> Discord Context</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Author:</td>
+                                <td><span class="badge bg-light text-dark">${data.author_name || 'Unknown'}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Channel:</td>
+                                <td>${data.channel_name || 'Unknown'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Guild:</td>
+                                <td>${data.guild_name || 'Unknown'}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Message ID:</td>
+                                <td><code class="small">${data.message_id || 'Unknown'}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-warning"><i class="fas fa-clock"></i> Timestamps</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Original Date:</td>
+                                <td>${formatDate(data.timestamp)}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Indexed At:</td>
+                                <td>${formatDate(data.indexed_at)}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                ${data.message_content ? `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-info"><i class="fas fa-comment"></i> Message Content</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <p class="card-text">${data.message_content}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-secondary"><i class="fas fa-info-circle"></i> Technical Details</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="fw-bold">Database ID:</td>
+                                <td><code>${data.id}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Channel ID:</td>
+                                <td><code class="small">${data.channel_id || 'Unknown'}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Author ID:</td>
+                                <td><code class="small">${data.author_id || 'Unknown'}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Guild ID:</td>
+                                <td><code class="small">${data.guild_id || 'Unknown'}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('${data.link_url}')">
+                                <i class="fas fa-copy"></i> Copy URL
+                            </button>
+                            <a href="${data.link_url}" target="_blank" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Open in New Tab
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('linkDetailsContent').innerHTML = detailsHtml;
+        })
+        .catch(error => {
+            console.error('Error fetching link details:', error);
+            document.getElementById('linkDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading link details: ${error.message}
+                </div>
+            `;
+        });
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show toast notification
+        const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+        toast.show();
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+        toast.show();
+    });
+}
+
+// Auto-submit search form on Enter
+document.getElementById('search').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+
+document.getElementById('domain').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+</script>
+{% endblock %}
