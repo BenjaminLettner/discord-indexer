@@ -43,36 +43,64 @@ class DatabaseManager:
     def get_connection(self):
         return sqlite3.connect(self.db_path)
     
-    def get_files(self, page=1, per_page=50, search=None, file_type=None):
+    def get_files(self, page=1, per_page=50, search=None, file_type=None, tag_ids=None):
         """Get paginated files with optional search and filtering"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         try:
             # Build query
-            query = '''
-                SELECT id, message_id, channel_name, guild_name, author_name, 
-                       filename, file_url, file_size, file_type, message_content, 
-                       timestamp, indexed_at
-                FROM indexed_files
-            '''
+            if tag_ids:
+                # Join with file_tags when filtering by tags
+                query = '''
+                    SELECT DISTINCT f.id, f.message_id, f.channel_name, f.guild_name, f.author_name, 
+                           f.filename, f.file_url, f.file_size, f.file_type, f.message_content, 
+                           f.timestamp, f.indexed_at
+                    FROM indexed_files f
+                    JOIN file_tags ft ON f.id = ft.file_id
+                '''
+            else:
+                query = '''
+                    SELECT id, message_id, channel_name, guild_name, author_name, 
+                           filename, file_url, file_size, file_type, message_content, 
+                           timestamp, indexed_at
+                    FROM indexed_files
+                '''
             
             conditions = []
             params = []
             
             if search:
-                conditions.append('(filename LIKE ? OR message_content LIKE ? OR author_name LIKE ?)')
+                if tag_ids:
+                    conditions.append('(f.filename LIKE ? OR f.message_content LIKE ? OR f.author_name LIKE ?)')
+                else:
+                    conditions.append('(filename LIKE ? OR message_content LIKE ? OR author_name LIKE ?)')
                 search_param = f'%{search}%'
                 params.extend([search_param, search_param, search_param])
             
             if file_type:
-                conditions.append('file_type LIKE ?')
+                if tag_ids:
+                    conditions.append('f.file_type LIKE ?')
+                else:
+                    conditions.append('file_type LIKE ?')
                 params.append(f'%{file_type}%')
+            
+            if tag_ids:
+                if isinstance(tag_ids, list):
+                    placeholders = ','.join(['?' for _ in tag_ids])
+                    conditions.append(f'ft.tag_id IN ({placeholders})')
+                    params.extend(tag_ids)
+                else:
+                    conditions.append('ft.tag_id = ?')
+                    params.append(tag_ids)
             
             if conditions:
                 query += ' WHERE ' + ' AND '.join(conditions)
             
-            query += ' ORDER BY timestamp DESC'
+            if tag_ids:
+                query += ' ORDER BY f.timestamp DESC'
+            else:
+                query += ' ORDER BY timestamp DESC'
             
             # Get total count
             count_query = query.replace(
@@ -90,41 +118,75 @@ class DatabaseManager:
             cursor.execute(query, params)
             files = cursor.fetchall()
             
-            return files, total
+            # Add tags for each file
+            files_with_tags = []
+            for file in files:
+                file_tags = self.get_file_tags(file[0])  # file[0] is the file ID
+                files_with_tags.append(list(file) + [file_tags])
+            
+            return files_with_tags, total
         except Exception as e:
             print(f"Error getting files: {e}")
             return [], 0
         finally:
             conn.close()
     
-    def get_links(self, page=1, per_page=50, search=None, domain=None):
+    def get_links(self, page=1, per_page=50, search=None, domain=None, tag_ids=None):
         """Get paginated links with optional search and filtering"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         try:
-            query = '''
-                SELECT id, message_id, channel_name, guild_name, author_name, 
-                       link_url, link_domain, message_content, timestamp, indexed_at
-                FROM indexed_links
-            '''
+            # Build query
+            if tag_ids:
+                # Join with link_tags when filtering by tags
+                query = '''
+                    SELECT DISTINCT l.id, l.message_id, l.channel_name, l.guild_name, l.author_name, 
+                           l.link_url, l.link_domain, l.message_content, l.timestamp, l.indexed_at
+                    FROM indexed_links l
+                    JOIN link_tags lt ON l.id = lt.link_id
+                '''
+            else:
+                query = '''
+                    SELECT id, message_id, channel_name, guild_name, author_name, 
+                           link_url, link_domain, message_content, timestamp, indexed_at
+                    FROM indexed_links
+                '''
             
             conditions = []
             params = []
             
             if search:
-                conditions.append('(link_url LIKE ? OR message_content LIKE ? OR author_name LIKE ?)')
+                if tag_ids:
+                    conditions.append('(l.link_url LIKE ? OR l.message_content LIKE ? OR l.author_name LIKE ?)')
+                else:
+                    conditions.append('(link_url LIKE ? OR message_content LIKE ? OR author_name LIKE ?)')
                 search_param = f'%{search}%'
                 params.extend([search_param, search_param, search_param])
             
             if domain:
-                conditions.append('link_domain LIKE ?')
+                if tag_ids:
+                    conditions.append('l.link_domain LIKE ?')
+                else:
+                    conditions.append('link_domain LIKE ?')
                 params.append(f'%{domain}%')
+            
+            if tag_ids:
+                if isinstance(tag_ids, list):
+                    placeholders = ','.join(['?' for _ in tag_ids])
+                    conditions.append(f'lt.tag_id IN ({placeholders})')
+                    params.extend(tag_ids)
+                else:
+                    conditions.append('lt.tag_id = ?')
+                    params.append(tag_ids)
             
             if conditions:
                 query += ' WHERE ' + ' AND '.join(conditions)
             
-            query += ' ORDER BY timestamp DESC'
+            if tag_ids:
+                query += ' ORDER BY l.timestamp DESC'
+            else:
+                query += ' ORDER BY timestamp DESC'
             
             # Get total count
             count_query = query.replace(
@@ -142,7 +204,13 @@ class DatabaseManager:
             cursor.execute(query, params)
             links = cursor.fetchall()
             
-            return links, total
+            # Add tags for each link
+            links_with_tags = []
+            for link in links:
+                link_tags = self.get_link_tags(link[0])  # link[0] is the link ID
+                links_with_tags.append(list(link) + [link_tags])
+            
+            return links_with_tags, total
         except Exception as e:
             print(f"Error getting links: {e}")
             return [], 0
@@ -203,6 +271,159 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting stats: {e}")
             return {}
+        finally:
+            conn.close()
+    
+    def get_all_tags(self):
+        """Get all available tags"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('SELECT id, name, color, description FROM tags ORDER BY name')
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting tags: {e}")
+            return []
+        finally:
+            conn.close()
+    
+    def create_tag(self, name, color='#007bff', description='', created_by=None):
+        """Create a new tag"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                INSERT INTO tags (name, color, description, created_by)
+                VALUES (?, ?, ?, ?)
+            ''', (name, color, description, created_by))
+            conn.commit()
+            return cursor.lastrowid
+        except Exception as e:
+            print(f"Error creating tag: {e}")
+            return None
+        finally:
+            conn.close()
+    
+    def delete_tag(self, tag_id):
+        """Delete a tag and all its associations"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('DELETE FROM tags WHERE id = ?', (tag_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting tag: {e}")
+            return False
+        finally:
+            conn.close()
+    
+    def add_file_tag(self, file_id, tag_id, added_by=None):
+        """Add a tag to a file"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO file_tags (file_id, tag_id, added_by)
+                VALUES (?, ?, ?)
+            ''', (file_id, tag_id, added_by))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error adding file tag: {e}")
+            return False
+        finally:
+            conn.close()
+    
+    def remove_file_tag(self, file_id, tag_id):
+        """Remove a tag from a file"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('DELETE FROM file_tags WHERE file_id = ? AND tag_id = ?', (file_id, tag_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error removing file tag: {e}")
+            return False
+        finally:
+            conn.close()
+    
+    def get_file_tags(self, file_id):
+        """Get all tags for a specific file"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                SELECT t.id, t.name, t.color, t.description
+                FROM tags t
+                JOIN file_tags ft ON t.id = ft.tag_id
+                WHERE ft.file_id = ?
+                ORDER BY t.name
+            ''', (file_id,))
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting file tags: {e}")
+            return []
+        finally:
+            conn.close()
+    
+    def add_link_tag(self, link_id, tag_id, added_by=None):
+        """Add a tag to a link"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO link_tags (link_id, tag_id, added_by)
+                VALUES (?, ?, ?)
+            ''', (link_id, tag_id, added_by))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error adding link tag: {e}")
+            return False
+        finally:
+            conn.close()
+    
+    def remove_link_tag(self, link_id, tag_id):
+        """Remove a tag from a link"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('DELETE FROM link_tags WHERE link_id = ? AND tag_id = ?', (link_id, tag_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error removing link tag: {e}")
+            return False
+        finally:
+            conn.close()
+    
+    def get_link_tags(self, link_id):
+        """Get all tags for a specific link"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                SELECT t.id, t.name, t.color, t.description
+                FROM tags t
+                JOIN link_tags lt ON t.id = lt.tag_id
+                WHERE lt.link_id = ?
+                ORDER BY t.name
+            ''', (link_id,))
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting link tags: {e}")
+            return []
         finally:
             conn.close()
 
@@ -374,6 +595,27 @@ def delete_user(user_id):
     
     return redirect(url_for('profile'))
 
+@app.route('/toggle_user_admin/<int:user_id>', methods=['POST'])
+@login_required
+def toggle_user_admin(user_id):
+    """Toggle user admin status (admin only)"""
+    if not current_user.is_admin:
+        flash('Access denied', 'error')
+        return redirect(url_for('profile'))
+    
+    user_data = user_manager.get_user_by_id(user_id)
+    if user_data:
+        new_admin_status = not user_data['is_admin']
+        if user_manager.toggle_user_admin(user_id, new_admin_status):
+            status_text = 'granted admin privileges' if new_admin_status else 'removed admin privileges'
+            flash(f'User {user_data["username"]} {status_text} successfully', 'success')
+        else:
+            flash('Failed to update user admin status', 'error')
+    else:
+        flash('User not found', 'error')
+    
+    return redirect(url_for('profile'))
+
 @app.route('/files')
 @login_required
 def files():
@@ -381,9 +623,21 @@ def files():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     file_type = request.args.get('type', '')
+    tag_ids = request.args.getlist('tags')
     per_page = 50
     
-    files_data, total = db.get_files(page=page, per_page=per_page, search=search, file_type=file_type)
+    # Convert tag_ids to integers if provided
+    if tag_ids:
+        tag_ids = [int(tag_id) for tag_id in tag_ids if tag_id.isdigit()]
+        if not tag_ids:
+            tag_ids = None
+    else:
+        tag_ids = None
+    
+    files_data, total = db.get_files(page=page, per_page=per_page, search=search, file_type=file_type, tag_ids=tag_ids)
+    
+    # Get all tags for the filter dropdown
+    all_tags = db.get_all_tags()
     
     # Calculate pagination
     total_pages = (total + per_page - 1) // per_page
@@ -394,7 +648,9 @@ def files():
                          total_pages=total_pages, 
                          total=total,
                          search=search,
-                         file_type=file_type)
+                         file_type=file_type,
+                         all_tags=all_tags,
+                         selected_tags=request.args.getlist('tags'))
 
 @app.route('/links')
 @login_required
@@ -403,9 +659,21 @@ def links():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     domain = request.args.get('domain', '')
+    tag_ids = request.args.getlist('tags')
     per_page = 50
     
-    links_data, total = db.get_links(page=page, per_page=per_page, search=search, domain=domain)
+    # Convert tag_ids to integers if provided
+    if tag_ids:
+        tag_ids = [int(tag_id) for tag_id in tag_ids if tag_id.isdigit()]
+        if not tag_ids:
+            tag_ids = None
+    else:
+        tag_ids = None
+    
+    links_data, total = db.get_links(page=page, per_page=per_page, search=search, domain=domain, tag_ids=tag_ids)
+    
+    # Get all tags for the filter dropdown
+    all_tags = db.get_all_tags()
     
     # Calculate pagination
     total_pages = (total + per_page - 1) // per_page
@@ -416,7 +684,9 @@ def links():
                          total_pages=total_pages, 
                          total=total,
                          search=search,
-                         domain=domain)
+                         domain=domain,
+                         all_tags=all_tags,
+                         selected_tags=request.args.getlist('tags'))
 
 @app.route('/api/stats')
 @login_required
@@ -510,6 +780,125 @@ def api_link_details(link_id):
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
+
+# Tag management routes (admin only)
+@app.route('/tags')
+@login_required
+def manage_tags():
+    """Tag management page (admin only)"""
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    tags = db.get_all_tags()
+    return render_template('tags.html', tags=tags)
+
+@app.route('/api/tags', methods=['POST'])
+@login_required
+def create_tag():
+    """Create a new tag (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    color = data.get('color', '#007bff')
+    description = data.get('description', '').strip()
+    
+    if not name:
+        return jsonify({'error': 'Tag name is required'}), 400
+    
+    tag_id = db.create_tag(name, color, description)
+    if tag_id:
+        return jsonify({'success': True, 'tag_id': tag_id})
+    else:
+        return jsonify({'error': 'Failed to create tag'}), 500
+
+@app.route('/api/tags/<int:tag_id>', methods=['DELETE'])
+@login_required
+def delete_tag(tag_id):
+    """Delete a tag (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if db.delete_tag(tag_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to delete tag'}), 500
+
+@app.route('/api/files/<int:file_id>/tags', methods=['POST'])
+@login_required
+def add_file_tag(file_id):
+    """Add tag to file (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    data = request.get_json()
+    tag_id = data.get('tag_id')
+    
+    if not tag_id:
+        return jsonify({'error': 'Tag ID is required'}), 400
+    
+    if db.add_file_tag(file_id, tag_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to add tag'}), 500
+
+@app.route('/api/files/<int:file_id>/tags/<int:tag_id>', methods=['DELETE'])
+@login_required
+def remove_file_tag(file_id, tag_id):
+    """Remove tag from file (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if db.remove_file_tag(file_id, tag_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to remove tag'}), 500
+
+@app.route('/api/links/<int:link_id>/tags', methods=['POST'])
+@login_required
+def add_link_tag(link_id):
+    """Add tag to link (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    data = request.get_json()
+    tag_id = data.get('tag_id')
+    
+    if not tag_id:
+        return jsonify({'error': 'Tag ID is required'}), 400
+    
+    if db.add_link_tag(link_id, tag_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to add tag'}), 500
+
+@app.route('/api/links/<int:link_id>/tags/<int:tag_id>', methods=['DELETE'])
+@login_required
+def remove_link_tag(link_id, tag_id):
+    """Remove tag from link (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    if db.remove_link_tag(link_id, tag_id):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to remove tag'}), 500
+
+@app.route('/api/files/<int:file_id>/tags')
+@login_required
+def get_file_tags(file_id):
+    """Get tags for a file"""
+    tags = db.get_file_tags(file_id)
+    return jsonify(tags)
+
+@app.route('/api/links/<int:link_id>/tags')
+@login_required
+def get_link_tags(link_id):
+    """Get tags for a link"""
+    tags = db.get_link_tags(link_id)
+    return jsonify(tags)
 
 @app.route('/terms')
 def terms_of_service():

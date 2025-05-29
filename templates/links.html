@@ -16,15 +16,26 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="search" class="form-label">Search</label>
                 <input type="text" class="form-control" id="search" name="search" 
                        value="{{ search }}" placeholder="Search by URL, content, or author...">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="domain" class="form-label">Domain</label>
                 <input type="text" class="form-control" id="domain" name="domain" 
                        value="{{ domain }}" placeholder="e.g., youtube.com, github.com">
+            </div>
+            <div class="col-md-3">
+                <label for="tags" class="form-label">Tags</label>
+                <select class="form-select" id="tags" name="tags" multiple>
+                    {% for tag in all_tags %}
+                    <option value="{{ tag[0] }}" 
+                            {% if tag[0]|string in selected_tags %}selected{% endif %}>
+                        {{ tag[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">&nbsp;</label>
@@ -35,7 +46,7 @@
                 </div>
             </div>
         </form>
-        {% if search or domain %}
+        {% if search or domain or selected_tags %}
         <div class="mt-2">
             <a href="{{ url_for('links') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-times"></i> Clear Filters
@@ -57,6 +68,7 @@
                         <th>Author</th>
                         <th>Channel</th>
                         <th>Domain</th>
+                        <th>Tags</th>
                         <th>Date</th>
                         <th>Actions</th>
                     </tr>
@@ -112,6 +124,15 @@
                             {% endif %}
                         </td>
                         <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for tag in link[10] %}
+                                <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
+                                    {{ tag[1] }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
                             <div>
                                 <div class="fw-bold">{{ link[8][:10] if link[8] else 'Unknown' }}</div>
                                 <small class="text-muted">{{ link[8][11:19] if link[8] and link[8]|length > 19 else '' }}</small>
@@ -128,6 +149,12 @@
                                 <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('{{ link[5] }}')" title="Copy URL">
                                     <i class="fas fa-copy"></i>
                                 </button>
+                                {% if current_user.is_admin %}
+                                <button class="btn btn-outline-success btn-sm" 
+                                        onclick="showTagModal({{ link[0] }}, 'links')" title="Manage Tags">
+                                    <i class="fas fa-tags"></i>
+                                </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -410,6 +437,121 @@ function copyToClipboard(text) {
     });
 }
 
+// Tag management functions
+function showTagModal(linkId, type) {
+    document.getElementById('tagModalLabel').textContent = `Manage Tags for Link #${linkId}`;
+    document.getElementById('tagModal').setAttribute('data-link-id', linkId);
+    document.getElementById('tagModal').setAttribute('data-type', type);
+    
+    loadCurrentTags(linkId, type);
+    
+    const modal = new bootstrap.Modal(document.getElementById('tagModal'));
+    modal.show();
+}
+
+function loadCurrentTags(linkId, type) {
+    const endpoint = type === 'links' ? `/api/links/${linkId}/tags` : `/api/files/${linkId}/tags`;
+    
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            const currentTagsContainer = document.getElementById('currentTags');
+            currentTagsContainer.innerHTML = '';
+            
+            if (data.tags && data.tags.length > 0) {
+                data.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'badge me-2 mb-2 d-inline-flex align-items-center';
+                    tagElement.style.backgroundColor = tag.color;
+                    tagElement.style.color = 'white';
+                    tagElement.innerHTML = `
+                        ${tag.name}
+                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                onclick="removeTag(${tag.id}, '${type}')" 
+                                style="font-size: 0.7em;"></button>
+                    `;
+                    currentTagsContainer.appendChild(tagElement);
+                });
+            } else {
+                currentTagsContainer.innerHTML = '<span class="text-muted">No tags assigned</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tags:', error);
+            document.getElementById('currentTags').innerHTML = '<span class="text-danger">Error loading tags</span>';
+        });
+}
+
+function addTag(type) {
+    const modal = document.getElementById('tagModal');
+    const linkId = modal.getAttribute('data-link-id');
+    const tagSelect = document.getElementById('tagSelect');
+    const tagId = tagSelect.value;
+    
+    if (!tagId) {
+        alert('Please select a tag');
+        return;
+    }
+    
+    const endpoint = type === 'links' ? `/api/links/${linkId}/tags` : `/api/files/${linkId}/tags`;
+    
+    fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tag_id: parseInt(tagId) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadCurrentTags(linkId, type);
+            tagSelect.value = '';
+            // Reload the page to update the tags display
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error adding tag: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error adding tag:', error);
+        alert('Error adding tag');
+    });
+}
+
+function removeTag(tagId, type) {
+    const modal = document.getElementById('tagModal');
+    const linkId = modal.getAttribute('data-link-id');
+    
+    const endpoint = type === 'links' ? `/api/links/${linkId}/tags` : `/api/files/${linkId}/tags`;
+    
+    fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tag_id: tagId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadCurrentTags(linkId, type);
+            // Reload the page to update the tags display
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        } else {
+            alert('Error removing tag: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error removing tag:', error);
+        alert('Error removing tag');
+    });
+}
+
 // Auto-submit search form on Enter
 document.getElementById('search').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
@@ -423,4 +565,35 @@ document.getElementById('domain').addEventListener('keypress', function(e) {
     }
 });
 </script>
+
+<!-- Tag Management Modal -->
+<div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="tagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tagModalLabel">Manage Tags</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Current Tags:</label>
+                    <div id="currentTags"></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="tagSelect" class="form-label">Add Tag:</label>
+                    <div class="input-group">
+                        <select class="form-select" id="tagSelect">
+                            <option value="">Select a tag...</option>
+                            {% for tag in all_tags %}
+                            <option value="{{ tag[0] }}">{{ tag[1] }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-primary" type="button" onclick="addTag('links')">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

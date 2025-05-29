@@ -16,15 +16,26 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="search" class="form-label">Search</label>
                 <input type="text" class="form-control" id="search" name="search" 
                        value="{{ search }}" placeholder="Search by filename, content, or author...">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="type" class="form-label">File Type</label>
                 <input type="text" class="form-control" id="type" name="type" 
                        value="{{ file_type }}" placeholder="e.g., image/png, application/pdf">
+            </div>
+            <div class="col-md-3">
+                <label for="tags" class="form-label">Tags</label>
+                <select class="form-select" id="tags" name="tags" multiple>
+                    {% for tag in all_tags %}
+                    <option value="{{ tag[0] }}" 
+                            {% if tag[0]|string in selected_tags %}selected{% endif %}>
+                        {{ tag[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">&nbsp;</label>
@@ -35,7 +46,25 @@
                 </div>
             </div>
         </form>
-        {% if search or file_type %}
+        
+        <!-- Filter Presets -->
+        {% if filter_presets %}
+        <div class="mt-3">
+            <label class="form-label">Quick Filters:</label>
+            <div class="d-flex flex-wrap gap-2">
+                {% for preset in filter_presets %}
+                    {% if preset[3] in ['files', 'both'] %}
+                    <a href="{{ url_for('files', preset=preset[0]) }}" 
+                       class="btn btn-sm {% if current_preset == preset[0]|string %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        {{ preset[1] }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if search or file_type or selected_tags or current_preset %}
         <div class="mt-2">
             <a href="{{ url_for('files') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-times"></i> Clear Filters
@@ -58,6 +87,7 @@
                         <th>Channel</th>
                         <th>Size</th>
                         <th>Type</th>
+                        <th>Tags</th>
                         <th>Date</th>
                         <th>Actions</th>
                     </tr>
@@ -124,6 +154,15 @@
                             {% endif %}
                         </td>
                         <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for tag in file[11] %}
+                                <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
+                                    {{ tag[1] }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
                             <div>
                                 <div class="fw-bold">{{ file[10][:10] if file[10] else 'Unknown' }}</div>
                                 <small class="text-muted">{{ file[10][11:19] if file[10] and file[10]|length > 19 else '' }}</small>
@@ -137,6 +176,12 @@
                                 <button class="btn btn-outline-info btn-sm" onclick="showFileDetails({{ file[0] }});" title="Details">
                                     <i class="fas fa-info-circle"></i>
                                 </button>
+                                {% if current_user.is_admin %}
+                                <button class="btn btn-outline-success btn-sm" 
+                                        onclick="showTagModal({{ file[0] }}, 'files')" title="Manage Tags">
+                                    <i class="fas fa-tags"></i>
+                                </button>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -234,8 +279,39 @@
 </div>
 {% endblock %}
 
+<!-- Tag Management Modal -->
+<div class="modal fade" id="tagModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manage Tags</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="currentTags" class="mb-3">
+                    <h6>Current Tags:</h6>
+                    <div id="currentTagsList"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="tagSelect" class="form-label">Add Tag:</label>
+                    <select class="form-select" id="tagSelect">
+                        <option value="">Select a tag...</option>
+                        {% for tag in all_tags %}
+                        <option value="{{ tag[0] }}" data-color="{{ tag[2] }}">{{ tag[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="button" class="btn btn-success" onclick="addTag()">Add Tag</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% block scripts %}
 <script>
+let currentItemId = null;
+let currentItemType = null;
+
 function showFileDetails(fileId) {
     // Show loading state
     document.getElementById('fileDetailsContent').innerHTML = `
@@ -413,6 +489,69 @@ function showImagePreview(imageUrl, fileName) {
     };
     
     modal.show();
+}
+
+function showTagModal(itemId, itemType) {
+    currentItemId = itemId;
+    currentItemType = itemType;
+    loadCurrentTags();
+    new bootstrap.Modal(document.getElementById('tagModal')).show();
+}
+
+function loadCurrentTags() {
+    fetch(`/api/${currentItemType}/${currentItemId}/tags`)
+        .then(response => response.json())
+        .then(tags => {
+            const container = document.getElementById('currentTagsList');
+            container.innerHTML = '';
+            tags.forEach(tag => {
+                const badge = document.createElement('span');
+                badge.className = 'badge me-2 mb-2';
+                badge.style.backgroundColor = tag[2];
+                badge.style.color = 'white';
+                badge.innerHTML = `${tag[1]} <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(${tag[0]})"></button>`;
+                container.appendChild(badge);
+            });
+        });
+}
+
+function addTag() {
+    const select = document.getElementById('tagSelect');
+    const tagId = select.value;
+    if (!tagId) return;
+    
+    fetch(`/api/${currentItemType}/${currentItemId}/tags`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({tag_id: parseInt(tagId)})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadCurrentTags();
+            select.value = '';
+            location.reload(); // Refresh to show updated tags
+        } else {
+            alert('Error adding tag: ' + data.error);
+        }
+    });
+}
+
+function removeTag(tagId) {
+    fetch(`/api/${currentItemType}/${currentItemId}/tags/${tagId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadCurrentTags();
+            location.reload(); // Refresh to show updated tags
+        } else {
+            alert('Error removing tag: ' + data.error);
+        }
+    });
 }
 
 // Auto-submit search form on Enter

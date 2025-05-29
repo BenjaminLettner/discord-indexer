@@ -116,6 +116,17 @@
                                     <td>{{ user.last_login[:10] if user.last_login else 'Never' }}</td>
                                     <td>
                                         {% if user.id != current_user.id %}
+                                            <form method="POST" action="{{ url_for('toggle_user_admin', user_id=user.id) }}" style="display: inline;">
+                                                {% if user.is_admin %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove Admin">
+                                                        <i class="fas fa-user-minus"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Make Admin">
+                                                        <i class="fas fa-user-shield"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </form>
                                             <form method="POST" action="{{ url_for('toggle_user_status', user_id=user.id) }}" style="display: inline;">
                                                 {% if user.is_active %}
                                                     <button type="submit" class="btn btn-sm btn-warning" title="Deactivate">

@@ -216,6 +216,23 @@ class UserManager:
         finally:
             conn.close()
     
+    def toggle_user_admin(self, user_id: int, is_admin: bool) -> bool:
+        """Grant/revoke admin privileges (admin only)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                UPDATE users SET is_admin = ? WHERE id = ?
+            ''', (is_admin, user_id))
+            
+            conn.commit()
+            return True
+        except sqlite3.Error:
+            return False
+        finally:
+            conn.close()
+    
     def delete_user(self, user_id: int) -> bool:
         """Delete user account (admin only)"""
         conn = sqlite3.connect(self.db_path)

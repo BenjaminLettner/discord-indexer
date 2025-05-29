@@ -247,6 +247,13 @@
                                 <i class="fas fa-link"></i> Links
                             </a>
                         </li>
+                        {% if current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'manage_tags' }}" href="{{ url_for('manage_tags') }}">
+                                <i class="fas fa-tags"></i> Tags
+                            </a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('profile') }}">
                                 <i class="fas fa-user"></i> Profile

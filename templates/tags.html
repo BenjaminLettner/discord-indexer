@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Tag Management - DataChad{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Tag Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTagModal">
+            <i class="fas fa-plus"></i> Create Tag
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Existing Tags</h5>
+            </div>
+            <div class="card-body">
+                {% if tags %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Color</th>
+                                <th>Description</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tag in tags %}
+                            <tr>
+                                <td>
+                                    <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
+                                        {{ tag[1] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="color-preview" style="width: 20px; height: 20px; background-color: {{ tag[2] }}; border-radius: 3px; margin-right: 8px;"></div>
+                                        <code>{{ tag[2] }}</code>
+                                    </div>
+                                </td>
+                                <td>{{ tag[3] or 'No description' }}</td>
+                                <td>{{ tag[4] }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteTag({{ tag[0] }}, '{{ tag[1] }}')"
+                                            title="Delete tag">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No tags created yet</h5>
+                    <p class="text-muted">Create your first tag to start organizing your content.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Tag Modal -->
+<div class="modal fade" id="createTagModal" tabindex="-1" aria-labelledby="createTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTagModalLabel">Create New Tag</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTagForm">
+                    <div class="mb-3">
+                        <label for="tagName" class="form-label">Tag Name *</label>
+                        <input type="text" class="form-control" id="tagName" required maxlength="50">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tagColor" class="form-label">Color</label>
+                        <div class="d-flex align-items-center">
+                            <input type="color" class="form-control form-control-color" id="tagColor" value="#007bff" style="width: 60px; margin-right: 10px;">
+                            <input type="text" class="form-control" id="tagColorText" value="#007bff" pattern="^#[0-9A-Fa-f]{6}$">
+                        </div>
+                        <div class="form-text">Choose a color for the tag badge</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tagDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="tagDescription" rows="3" maxlength="255"></textarea>
+                        <div class="form-text">Optional description for the tag</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preview</label>
+                        <div>
+                            <span class="badge" id="tagPreview" style="background-color: #007bff; color: white;">Tag Name</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createTag()">Create Tag</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update preview when inputs change
+document.getElementById('tagName').addEventListener('input', updatePreview);
+document.getElementById('tagColor').addEventListener('input', function() {
+    document.getElementById('tagColorText').value = this.value;
+    updatePreview();
+});
+document.getElementById('tagColorText').addEventListener('input', function() {
+    if (this.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+        document.getElementById('tagColor').value = this.value;
+        updatePreview();
+    }
+});
+
+function updatePreview() {
+    const name = document.getElementById('tagName').value || 'Tag Name';
+    const color = document.getElementById('tagColor').value;
+    const preview = document.getElementById('tagPreview');
+    
+    preview.textContent = name;
+    preview.style.backgroundColor = color;
+    
+    // Calculate text color based on background brightness
+    const rgb = parseInt(color.slice(1), 16);
+    const r = (rgb >> 16) & 255;
+    const g = (rgb >> 8) & 255;
+    const b = rgb & 255;
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    preview.style.color = brightness > 128 ? 'black' : 'white';
+}
+
+function createTag() {
+    const name = document.getElementById('tagName').value.trim();
+    const color = document.getElementById('tagColor').value;
+    const description = document.getElementById('tagDescription').value.trim();
+    
+    if (!name) {
+        alert('Tag name is required');
+        return;
+    }
+    
+    fetch('/api/tags', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            color: color,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error creating tag: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating tag');
+    });
+}
+
+function deleteTag(tagId, tagName) {
+    if (!confirm(`Are you sure you want to delete the tag "${tagName}"? This will remove it from all files and links.`)) {
+        return;
+    }
+    
+    fetch(`/api/tags/${tagId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error deleting tag: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting tag');
+    });
+}
+</script>
+{% endblock %}
