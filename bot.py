@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import json
 import sqlite3
 import re
@@ -39,7 +39,11 @@ class DatabaseManager:
         self.db_path = db_path
     
     def get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        # Enable WAL mode for better concurrent access
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA busy_timeout=30000')
+        return conn
     
     def insert_file(self, message, attachment):
         """Insert a file attachment into the database"""
@@ -179,6 +183,82 @@ class DatabaseManager:
             logger.error(f"Error completing indexing operation: {e}")
         finally:
             conn.close()
+    
+    async def refresh_file_urls(self):
+        """Refresh all file URLs in the database"""
+        try:
+            # Get all files that need URL refresh
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, message_id, channel_id, filename FROM indexed_files')
+            files = cursor.fetchall()
+            conn.close()
+            
+            refreshed_count = 0
+            batch_size = 10  # Process in smaller batches
+            
+            for i in range(0, len(files), batch_size):
+                batch = files[i:i + batch_size]
+                
+                for file_id, message_id, channel_id, filename in batch:
+                    try:
+                        # Try to get the message and update the URL
+                        channel = bot.get_channel(int(channel_id))
+                        if channel:
+                            message = await channel.fetch_message(int(message_id))
+                            if message and message.attachments:
+                                # Find the matching attachment by filename
+                                for attachment in message.attachments:
+                                    if attachment.filename == filename:
+                                        # Update the URL in database with retry logic
+                                        for retry in range(3):
+                                            conn = None
+                                            try:
+                                                conn = self.get_connection()
+                                                cursor = conn.cursor()
+                                                # Check if this would create a duplicate entry
+                                                cursor.execute(
+                                                    'SELECT COUNT(*) FROM indexed_files WHERE message_id = ? AND file_url = ? AND id != ?',
+                                                    (str(message_id), attachment.url, file_id)
+                                                )
+                                                if cursor.fetchone()[0] == 0:
+                                                    cursor.execute(
+                                                        'UPDATE indexed_files SET file_url = ? WHERE id = ?',
+                                                        (attachment.url, file_id)
+                                                    )
+                                                else:
+                                                    logger.warning(f"Skipping URL update for file {filename} (ID: {file_id}) - would create duplicate entry")
+                                                conn.commit()
+                                                conn.close()
+                                                refreshed_count += 1
+                                                break
+                                            except sqlite3.OperationalError as db_e:
+                                                if conn:
+                                                    conn.close()
+                                                if "database is locked" in str(db_e) and retry < 2:
+                                                    await asyncio.sleep(1 + retry)  # Exponential backoff
+                                                    continue
+                                                else:
+                                                    raise db_e
+                                            except Exception as e:
+                                                if conn:
+                                                    conn.close()
+                                                raise e
+                                        break
+                    except Exception as e:
+                        logger.warning(f"Could not refresh URL for file {filename} (ID: {file_id}): {e}")
+                        continue
+                
+                # Small delay between batches to reduce database pressure
+                if i + batch_size < len(files):
+                    await asyncio.sleep(0.1)
+            
+            logger.info(f"Refreshed {refreshed_count} file URLs")
+            return refreshed_count
+            
+        except Exception as e:
+            logger.error(f"Error refreshing file URLs: {e}")
+            return 0
 
 # Initialize database manager
 db = DatabaseManager(config['database']['path'])
@@ -212,9 +292,24 @@ async def process_message(message):
     
     return files_indexed, links_indexed
 
+@tasks.loop(hours=24)
+async def daily_url_refresh():
+    """Daily task to refresh all file URLs"""
+    logger.info("Starting daily URL refresh...")
+    try:
+        refreshed_count = await db.refresh_file_urls()
+        logger.info(f"Daily URL refresh completed. Refreshed {refreshed_count} URLs.")
+    except Exception as e:
+        logger.error(f"Error during daily URL refresh: {e}")
+
 @bot.event
 async def on_ready():
     logger.info(f'{bot.user} has connected to Discord!')
+    
+    # Start the daily URL refresh task
+    if not daily_url_refresh.is_running():
+        daily_url_refresh.start()
+        logger.info("Started daily URL refresh task")
     
     # Sync slash commands
     try:
@@ -356,6 +451,54 @@ async def index_command(interaction: discord.Interaction):
             color=discord.Color.red()
         )
         await interaction.followup.send(embed=error_embed)
+
+@bot.tree.command(name="refresh_urls", description="Manually refresh all file URLs to prevent expiration")
+async def refresh_urls_command(interaction: discord.Interaction):
+    """Manually trigger URL refresh"""
+    await interaction.response.defer()
+    
+    try:
+        # Start refresh
+        start_embed = discord.Embed(
+            title="🔄 Refreshing URLs",
+            description="Starting to refresh all file URLs...",
+            color=discord.Color.orange()
+        )
+        await interaction.followup.send(embed=start_embed)
+        
+        # Perform refresh
+        refreshed_count = await db.refresh_file_urls()
+        
+        # Send completion message
+        completion_embed = discord.Embed(
+            title="✅ URL Refresh Complete",
+            description=f"Successfully refreshed {refreshed_count} file URLs",
+            color=discord.Color.green()
+        )
+        
+        completion_embed.add_field(
+            name="📊 Results",
+            value=f"Refreshed URLs: {refreshed_count:,}",
+            inline=False
+        )
+        
+        completion_embed.add_field(
+            name="ℹ️ Info",
+            value="File URLs are automatically refreshed daily to prevent expiration.",
+            inline=False
+        )
+        
+        await interaction.edit_original_response(embed=completion_embed)
+        logger.info(f"Manual URL refresh completed: {refreshed_count} URLs refreshed")
+        
+    except Exception as e:
+        logger.error(f"Error during manual URL refresh: {e}")
+        error_embed = discord.Embed(
+            title="❌ Refresh Error",
+            description=f"An error occurred during URL refresh: {str(e)}",
+            color=discord.Color.red()
+        )
+        await interaction.edit_original_response(embed=error_embed)
 
 @bot.tree.command(name="dashboard", description="Get the web dashboard link")
 async def dashboard_command(interaction: discord.Interaction):
