@@ -492,65 +492,155 @@ function showImagePreview(imageUrl, fileName) {
 }
 
 function showTagModal(itemId, itemType) {
+    console.log('showTagModal called with:', { itemId, itemType });
+    console.log('Current user admin status:', {{ 'true' if current_user.is_admin else 'false' }});
     currentItemId = itemId;
     currentItemType = itemType;
+    console.log('Set currentItemId:', currentItemId, 'currentItemType:', currentItemType);
     loadCurrentTags();
     new bootstrap.Modal(document.getElementById('tagModal')).show();
 }
 
 function loadCurrentTags() {
-    fetch(`/api/${currentItemType}/${currentItemId}/tags`)
-        .then(response => response.json())
+    console.log('loadCurrentTags called with currentItemType:', currentItemType, 'currentItemId:', currentItemId);
+    const apiUrl = `/api/${currentItemType}/${currentItemId}/tags`;
+    console.log('Fetching tags from:', apiUrl);
+    
+    fetch(apiUrl)
+        .then(response => {
+            console.log('API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(tags => {
+            console.log('Received tags data:', tags);
+            console.log('Tags type:', typeof tags, 'Is array:', Array.isArray(tags));
+            
             const container = document.getElementById('currentTagsList');
             container.innerHTML = '';
-            tags.forEach(tag => {
-                const badge = document.createElement('span');
-                badge.className = 'badge me-2 mb-2';
-                badge.style.backgroundColor = tag[2];
-                badge.style.color = 'white';
-                badge.innerHTML = `${tag[1]} <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="removeTag(${tag[0]})"></button>`;
-                container.appendChild(badge);
-            });
+            
+            if (tags && tags.length > 0) {
+                console.log('Processing', tags.length, 'tags');
+                tags.forEach((tagArray, index) => {
+                    console.log(`Tag ${index}:`, tagArray);
+                    // Convert array format [id, name, color, description] to object
+                    const tag = {
+                        id: tagArray[0],
+                        name: tagArray[1], 
+                        color: tagArray[2],
+                        description: tagArray[3]
+                    };
+                    console.log(`Converted tag ${index}:`, tag);
+                    
+                    const badge = document.createElement('span');
+                    badge.className = 'badge me-2 mb-2 d-inline-flex align-items-center';
+                    badge.style.backgroundColor = tag.color;
+                    badge.style.color = 'white';
+                    badge.innerHTML = `
+                        ${tag.name}
+                        <button type="button" class="btn-close btn-close-white ms-2" 
+                                onclick="removeTag(${tag.id})" 
+                                style="font-size: 0.7em;"></button>
+                    `;
+                    container.appendChild(badge);
+                });
+            } else {
+                console.log('No tags found or empty array');
+                container.innerHTML = '<span class="text-muted">No tags assigned</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tags:', error);
+            document.getElementById('currentTagsList').innerHTML = '<span class="text-danger">Error loading tags</span>';
         });
 }
 
 function addTag() {
+    console.log('addTag called');
+    console.log('Current state - itemType:', currentItemType, 'itemId:', currentItemId);
+    
     const select = document.getElementById('tagSelect');
     const tagId = select.value;
-    if (!tagId) return;
+    console.log('Selected tag ID:', tagId);
     
-    fetch(`/api/${currentItemType}/${currentItemId}/tags`, {
+    if (!tagId) {
+        console.log('No tag selected');
+        alert('Please select a tag');
+        return;
+    }
+    
+    const apiUrl = `/api/${currentItemType}/${currentItemId}/tags`;
+    const payload = {tag_id: parseInt(tagId)};
+    console.log('Making POST request to:', apiUrl);
+    console.log('Payload:', payload);
+    
+    fetch(apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({tag_id: parseInt(tagId)})
+        body: JSON.stringify(payload)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Add tag response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Add tag response data:', data);
         if (data.success) {
+            console.log('Tag added successfully, reloading current tags');
             loadCurrentTags();
             select.value = '';
-            location.reload(); // Refresh to show updated tags
+            // Reload the page to update the tags display
+            setTimeout(() => {
+                console.log('Reloading page');
+                location.reload();
+            }, 500);
         } else {
-            alert('Error adding tag: ' + data.error);
+            console.error('Failed to add tag:', data.error);
+            alert('Error adding tag: ' + (data.error || 'Unknown error'));
         }
+    })
+    .catch(error => {
+        console.error('Error adding tag:', error);
+        alert('Error adding tag');
     });
 }
 
 function removeTag(tagId) {
-    fetch(`/api/${currentItemType}/${currentItemId}/tags/${tagId}`, {
+    console.log('removeTag called with tagId:', tagId);
+    console.log('Current state - itemType:', currentItemType, 'itemId:', currentItemId);
+    
+    const apiUrl = `/api/${currentItemType}/${currentItemId}/tags/${tagId}`;
+    console.log('Making DELETE request to:', apiUrl);
+    
+    fetch(apiUrl, {
         method: 'DELETE'
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Remove tag response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Remove tag response data:', data);
         if (data.success) {
+            console.log('Tag removed successfully, reloading current tags');
             loadCurrentTags();
-            location.reload(); // Refresh to show updated tags
+            // Reload the page to update the tags display
+            setTimeout(() => {
+                console.log('Reloading page');
+                location.reload();
+            }, 500);
         } else {
-            alert('Error removing tag: ' + data.error);
+            console.error('Failed to remove tag:', data.error);
+            alert('Error removing tag: ' + (data.error || 'Unknown error'));
         }
+    })
+    .catch(error => {
+        console.error('Error removing tag:', error);
+        alert('Error removing tag');
     });
 }
 
