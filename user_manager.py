@@ -246,3 +246,141 @@ class UserManager:
             return False
         finally:
             conn.close()
+    
+    def get_user_by_discord_id(self, discord_id: str) -> Optional[Dict]:
+        """Get user data by Discord ID"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                SELECT id, username, email, is_admin, is_active, discord_id, avatar_url, auth_method
+                FROM users WHERE discord_id = ?
+            ''', (discord_id,))
+            
+            user_data = cursor.fetchone()
+            if user_data:
+                return {
+                    'id': user_data[0],
+                    'username': user_data[1],
+                    'email': user_data[2],
+                    'is_admin': bool(user_data[3]),
+                    'is_active': bool(user_data[4]),
+                    'discord_id': user_data[5],
+                    'avatar': user_data[6],
+                    'auth_method': user_data[7] or 'local'
+                }
+            return None
+        finally:
+            conn.close()
+    
+    def create_discord_user(self, discord_data: Dict) -> Optional[Dict]:
+        """Create a new user from Discord OAuth data"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Check if Discord user already exists
+            existing_user = self.get_user_by_discord_id(discord_data['id'])
+            if existing_user:
+                return existing_user
+            
+            # Create username from Discord data
+            username = discord_data['username']
+            if discord_data.get('discriminator') and discord_data['discriminator'] != '0':
+                username = f"{username}#{discord_data['discriminator']}"
+            
+            # Check if username already exists and make it unique
+            base_username = username
+            counter = 1
+            while True:
+                cursor.execute('SELECT id FROM users WHERE username = ?', (username,))
+                if not cursor.fetchone():
+                    break
+                username = f"{base_username}_{counter}"
+                counter += 1
+            
+            # Create avatar URL if avatar hash exists
+            avatar_url = None
+            if discord_data.get('avatar'):
+                avatar_url = f"https://cdn.discordapp.com/avatars/{discord_data['id']}/{discord_data['avatar']}.png"
+            
+            # Generate a random password hash for Discord users (they won't use it)
+            dummy_password_hash = self.hash_password(f"discord_user_{discord_data['id']}_{username}")
+            
+            cursor.execute('''
+                INSERT INTO users (username, password_hash, email, is_admin, is_active, discord_id, avatar_url, auth_method)
+                VALUES (?, ?, ?, ?, 1, ?, ?, 'discord')
+            ''', (
+                username,
+                dummy_password_hash,
+                discord_data.get('email'),
+                discord_data.get('is_admin', False),
+                discord_data['id'],
+                avatar_url
+            ))
+            
+            user_id = cursor.lastrowid
+            conn.commit()
+            
+            # Return the created user data
+            return {
+                'id': user_id,
+                'username': username,
+                'email': discord_data.get('email'),
+                'is_admin': discord_data.get('is_admin', False),
+                'is_active': True,
+                'discord_id': discord_data['id'],
+                'avatar': avatar_url,
+                'auth_method': 'discord'
+            }
+        except sqlite3.Error as e:
+            print(f"Database error creating Discord user: {e}")
+            return None
+        finally:
+            conn.close()
+    
+    def update_discord_user(self, discord_data: Dict) -> Optional[Dict]:
+        """Update existing Discord user data"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Create avatar URL if avatar hash exists
+            avatar_url = None
+            if discord_data.get('avatar'):
+                avatar_url = f"https://cdn.discordapp.com/avatars/{discord_data['id']}/{discord_data['avatar']}.png"
+            
+            cursor.execute('''
+                UPDATE users SET 
+                    email = COALESCE(?, email),
+                    avatar_url = ?,
+                    last_login = CURRENT_TIMESTAMP
+                WHERE discord_id = ?
+            ''', (
+                discord_data.get('email'),
+                avatar_url,
+                discord_data['id']
+            ))
+            
+            conn.commit()
+            
+            # Return updated user data
+            return self.get_user_by_discord_id(discord_data['id'])
+        except sqlite3.Error as e:
+            print(f"Database error updating Discord user: {e}")
+            return None
+        finally:
+            conn.close()
+    
+    def get_or_create_discord_user(self, discord_data: Dict) -> Optional[Dict]:
+        """Get existing Discord user or create new one"""
+        # Try to get existing user
+        existing_user = self.get_user_by_discord_id(discord_data['id'])
+        
+        if existing_user:
+            # Update user data and return
+            return self.update_discord_user(discord_data)
+        else:
+            # Create new user
+            return self.create_discord_user(discord_data)

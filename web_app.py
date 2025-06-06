@@ -11,6 +11,7 @@ import os
 from urllib.parse import urlparse
 import logging
 from user_manager import UserManager
+from discord_auth import DiscordOAuth2
 import tempfile
 import io
 from PIL import Image
@@ -23,6 +24,26 @@ with open('config.json', 'r') as f:
 
 app = Flask(__name__)
 app.secret_key = config['web']['secret_key']
+
+# Set logging level to INFO to capture debug messages
+import logging
+logging.basicConfig(level=logging.INFO)
+app.logger.setLevel(logging.INFO)
+
+# Initialize Discord OAuth2 if configured
+discord_oauth = None
+if config.get('discord_oauth', {}).get('enabled', False):
+    oauth_config = config['discord_oauth']
+    bot_token = config.get('discord', {}).get('token')  # Get bot token from existing config
+    discord_oauth = DiscordOAuth2(
+        client_id=oauth_config['client_id'],
+        client_secret=oauth_config['client_secret'],
+        redirect_uri=oauth_config['redirect_uri'],
+        required_guild_id=oauth_config.get('required_guild_id'),
+        required_roles=oauth_config.get('required_roles', []),
+        admin_roles=oauth_config.get('admin_roles', []),
+        bot_token=bot_token
+    )
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -37,6 +58,9 @@ class User(UserMixin):
         self.email = user_data.get('email')
         self.is_admin = user_data.get('is_admin', False)
         self._is_active = user_data.get('is_active', True)
+        self.auth_method = user_data.get('auth_method', 'local')
+        self.discord_id = user_data.get('discord_id')
+        self.avatar = user_data.get('avatar')
     
     @property
     def is_active(self):
@@ -517,7 +541,81 @@ def login():
         else:
             flash('Invalid username or password', 'error')
     
-    return render_template('login.html')
+    # Check if Discord OAuth is enabled
+    discord_auth_url = None
+    discord_oauth_enabled = discord_oauth and config.get('discord_oauth', {}).get('enabled', False)
+    if discord_oauth_enabled:
+        discord_auth_url = discord_oauth.get_authorization_url()
+    
+    return render_template('login.html', discord_auth_url=discord_auth_url, discord_oauth_enabled=discord_oauth_enabled)
+
+@app.route('/auth/discord')
+def discord_login():
+    """Redirect to Discord OAuth2"""
+    if not discord_oauth:
+        flash('Discord authentication is not configured', 'error')
+        return redirect(url_for('login'))
+    
+    auth_url = discord_oauth.get_authorization_url()
+    app.logger.info(f"Redirecting to Discord OAuth URL: {auth_url}")
+    app.logger.info(f"Configured redirect URI: {discord_oauth.redirect_uri}")
+    return redirect(auth_url)
+
+@app.route('/auth/discord/callback')
+def discord_callback():
+    """Handle Discord OAuth2 callback"""
+    app.logger.info(f"Discord callback hit with args: {request.args}")
+    app.logger.info(f"Request URL: {request.url}")
+    app.logger.info(f"Request headers: {dict(request.headers)}")
+    
+    if not discord_oauth:
+        flash('Discord authentication is not configured', 'error')
+        return redirect(url_for('login'))
+    
+    code = request.args.get('code')
+    error = request.args.get('error')
+    error_description = request.args.get('error_description')
+    
+    if error:
+        app.logger.error(f"Discord OAuth error: {error} - {error_description}")
+        flash(f'Discord authorization failed: {error_description or error}', 'error')
+        return redirect(url_for('login'))
+    
+    if not code:
+        app.logger.error("No authorization code received from Discord")
+        flash('Authorization failed: No code received from Discord', 'error')
+        return redirect(url_for('login'))
+    
+    app.logger.info(f"Received authorization code: {code[:10]}...")
+    
+    try:
+        app.logger.info("Attempting to authenticate user with Discord")
+        # Authenticate with Discord
+        user_data = discord_oauth.authenticate_user(code)
+        if not user_data:
+            app.logger.error("Discord authentication failed - no user data returned")
+            flash('Discord authentication failed. Please ensure you are a member of the required Discord server and have the necessary roles.', 'error')
+            return redirect(url_for('login'))
+        
+        app.logger.info(f"Successfully authenticated user: {user_data.get('username')}")
+        
+        # Create or update user in database
+        discord_user = user_manager.get_or_create_discord_user(user_data)
+        if discord_user:
+            user = User(discord_user)
+            login_user(user, duration=timedelta(seconds=config['auth']['session_timeout']))
+            app.logger.info(f"User {user.username} successfully logged in")
+            flash(f'Welcome, {user.username}!', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+        else:
+            app.logger.error("Failed to create user account in database")
+            flash('Failed to create user account', 'error')
+            return redirect(url_for('login'))
+    except Exception as e:
+        app.logger.error(f"Discord authentication failed: {str(e)}", exc_info=True)
+        flash(f'Authentication failed: {str(e)}', 'error')
+        return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required

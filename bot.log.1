@@ -659,8 +659,13 @@ Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
     raise CommandInvokeError(self, e) from e
 discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-06-06 22:11:09] [ERROR   ] discord.app_commands.tree: Ignoring exception in command 'dashboard'
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
     await adapter.create_interaction_response(
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
@@ -678,12 +683,13 @@ Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
     raise CommandInvokeError(self, e) from e
 discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-2025-06-06 21:24:37,733 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
+2025-06-06 22:11:09,008 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
 Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
     return await self._callback(interaction, **params)  # type: ignore
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
     await adapter.create_interaction_response(
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
@@ -701,22 +707,20 @@ Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
     raise CommandInvokeError(self, e) from e
 discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-._do_call(interaction, transformed_values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
-    raise CommandInvokeError(self, e) from e
-discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-2025-06-06 20:48:25,400 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
+[2025-06-06 22:13:43] [WARNING ] discord.webhook.async_: Webhook ID 1380671019957620769 is rate limited. Retrying in 0.30 seconds.
+2025-06-06 22:13:43,059 - discord.webhook.async_ - WARNING - Webhook ID 1380671019957620769 is rate limited. Retrying in 0.30 seconds.
+[2025-06-06 22:13:43] [ERROR   ] discord.app_commands.tree: Ignoring exception in command 'dashboard'
 Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
     return await self._callback(interaction, **params)  # type: ignore
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
     await adapter.create_interaction_response(
-  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
-    raise NotFound(response, data)
-discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 221, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
 
 The above exception was the direct cause of the following exception:
 
@@ -728,18 +732,19 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
     raise CommandInvokeError(self, e) from e
-discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-[2025-06-06 21:24:37] [ERROR   ] discord.app_commands.tree: Ignoring exception in command 'dashboard'
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
+2025-06-06 22:13:43,513 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
 Traceback (most recent call last):
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
     return await self._callback(interaction, **params)  # type: ignore
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
     await adapter.create_interaction_response(
-  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
-    raise NotFound(response, data)
-discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 221, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
 
 The above exception was the direct cause of the following exception:
 
@@ -751,14 +756,8 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
     raise CommandInvokeError(self, e) from e
-discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
-2025-06-06 21:24:37,752 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
-Traceback (most recent call last):
-  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
-    return await self._callback(interaction, **params)  # type: ignore
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/discord-indexer/bot.py", line 363, in dashboard_command
-  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: HTTPException: 400 Bad Request (error code: 40060): Interaction has already been acknowledged.
+"/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
     await adapter.create_interaction_response(
   File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
     raise NotFound(response, data)
@@ -777,3 +776,101 @@ Traceback (most recent call last):
 discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
 [2025-06-06 21:30:47] [INFO    ] discord.gateway: Shard ID None has successfully RESUMED session db9e02553432621904d4b9130dea9bbe.
 2025-06-06 21:30:47,524 - discord.gateway - INFO - Shard ID None has successfully RESUMED session db9e02553432621904d4b9130dea9bbe.
+[2025-06-06 22:09:00] [INFO    ] discord.gateway: Shard ID None has successfully RESUMED session db9e02553432621904d4b9130dea9bbe.
+2025-06-06 22:09:00,265 - discord.gateway - INFO - Shard ID None has successfully RESUMED session db9e02553432621904d4b9130dea9bbe.
+[2025-06-06 22:13:43] [ERROR   ] discord.app_commands.tree: Ignoring exception in command 'dashboard'
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
+    await adapter.create_interaction_response(
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/tree.py", line 1248, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 853, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
+2025-06-06 22:13:43,068 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
+    await adapter.create_interaction_response(
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/tree.py", line 1248, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 853, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
+[2025-06-06 22:15:37] [ERROR   ] discord.app_commands.tree: Ignoring exception in command 'dashboard'
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
+    await adapter.create_interaction_response(
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/tree.py", line 1248, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 853, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
+2025-06-06 22:15:37,222 - discord.app_commands.tree - ERROR - Ignoring exception in command 'dashboard'
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 828, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/bot.py", line 363, in dashboard_command
+    value=f"{stats['total_files']:,}",
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/interactions.py", line 661, in defer
+    await adapter.create_interaction_response(
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/webhook/async_.py", line 219, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10062): Unknown interaction
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/tree.py", line 1248, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 853, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/discord-indexer/venv/lib/python3.12/site-packages/discord/app_commands/commands.py", line 846, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'dashboard' raised an exception: NotFound: 404 Not Found (error code: 10062): Unknown interaction
