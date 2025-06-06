@@ -155,7 +155,7 @@
                         </td>
                         <td>
                             <div class="d-flex flex-wrap gap-1">
-                                {% for tag in file[11] %}
+                                {% for tag in file[12] %}
                                 <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
                                     {{ tag[1] }}
                                 </span>
@@ -277,8 +277,6 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
 <!-- Tag Management Modal -->
 <div class="modal fade" id="tagModal" tabindex="-1">
     <div class="modal-dialog">
@@ -306,6 +304,7 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>
@@ -514,8 +513,9 @@ function loadCurrentTags() {
             }
             return response.json();
         })
-        .then(tags => {
-            console.log('Received tags data:', tags);
+        .then(data => {
+            console.log('Received tags data:', data);
+            const tags = data.tags || [];
             console.log('Tags type:', typeof tags, 'Is array:', Array.isArray(tags));
             
             const container = document.getElementById('currentTagsList');
@@ -523,16 +523,8 @@ function loadCurrentTags() {
             
             if (tags && tags.length > 0) {
                 console.log('Processing', tags.length, 'tags');
-                tags.forEach((tagArray, index) => {
-                    console.log(`Tag ${index}:`, tagArray);
-                    // Convert array format [id, name, color, description] to object
-                    const tag = {
-                        id: tagArray[0],
-                        name: tagArray[1], 
-                        color: tagArray[2],
-                        description: tagArray[3]
-                    };
-                    console.log(`Converted tag ${index}:`, tag);
+                tags.forEach((tag, index) => {
+                    console.log(`Tag ${index}:`, tag);
                     
                     const badge = document.createElement('span');
                     badge.className = 'badge me-2 mb-2 d-inline-flex align-items-center';
@@ -590,14 +582,17 @@ function addTag() {
     .then(data => {
         console.log('Add tag response data:', data);
         if (data.success) {
-            console.log('Tag added successfully, reloading current tags');
-            loadCurrentTags();
+            console.log('Tag added successfully');
             select.value = '';
-            // Reload the page to update the tags display
+            // Close modal and reload page to update the tags display
+            const modal = bootstrap.Modal.getInstance(document.getElementById('tagModal'));
+            if (modal) {
+                modal.hide();
+            }
             setTimeout(() => {
                 console.log('Reloading page');
                 location.reload();
-            }, 500);
+            }, 300);
         } else {
             console.error('Failed to add tag:', data.error);
             alert('Error adding tag: ' + (data.error || 'Unknown error'));
@@ -626,13 +621,16 @@ function removeTag(tagId) {
     .then(data => {
         console.log('Remove tag response data:', data);
         if (data.success) {
-            console.log('Tag removed successfully, reloading current tags');
-            loadCurrentTags();
-            // Reload the page to update the tags display
+            console.log('Tag removed successfully');
+            // Close modal and reload page to update the tags display
+            const modal = bootstrap.Modal.getInstance(document.getElementById('tagModal'));
+            if (modal) {
+                modal.hide();
+            }
             setTimeout(() => {
                 console.log('Reloading page');
                 location.reload();
-            }, 500);
+            }, 300);
         } else {
             console.error('Failed to remove tag:', data.error);
             alert('Error removing tag: ' + (data.error || 'Unknown error'));

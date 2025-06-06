@@ -890,15 +890,29 @@ def remove_link_tag(link_id, tag_id):
 @login_required
 def get_file_tags(file_id):
     """Get tags for a file"""
-    tags = db.get_file_tags(file_id)
-    return jsonify(tags)
+    tags_raw = db.get_file_tags(file_id)
+    # Convert tuples to dictionaries for consistent API response
+    tags = [{
+        'id': tag[0],
+        'name': tag[1],
+        'color': tag[2],
+        'description': tag[3]
+    } for tag in tags_raw]
+    return jsonify({'tags': tags})
 
 @app.route('/api/links/<int:link_id>/tags')
 @login_required
 def get_link_tags(link_id):
     """Get tags for a link"""
-    tags = db.get_link_tags(link_id)
-    return jsonify(tags)
+    tags_raw = db.get_link_tags(link_id)
+    # Convert tuples to dictionaries for consistent API response
+    tags = [{
+        'id': tag[0],
+        'name': tag[1],
+        'color': tag[2],
+        'description': tag[3]
+    } for tag in tags_raw]
+    return jsonify({'tags': tags})
 
 @app.route('/terms')
 def terms_of_service():
