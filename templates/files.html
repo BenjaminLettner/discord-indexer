@@ -79,7 +79,7 @@
     <div class="card-body">
         {% if files %}
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover table-sm">
                 <thead>
                     <tr>
                         <th>File</th>
@@ -102,7 +102,6 @@
                                         <div class="image-preview-container" style="position: relative;">
                                             <img src="{{ file[6] }}" alt="{{ file[5] }}" 
                                                  class="image-thumbnail" 
-                                                 style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;"
                                                  onclick="showImagePreview('{{ file[6] }}', '{{ file[5] }}')" 
                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"
                                                  title="Click to preview">
@@ -112,8 +111,45 @@
                                         <i class="fas fa-video text-danger"></i>
                                     {% elif file[8] and 'audio' in file[8] %}
                                         <i class="fas fa-music text-info"></i>
-                                    {% elif file[8] and 'pdf' in file[8] %}
-                                        <i class="fas fa-file-pdf text-danger"></i>
+                                    {% elif file[8] and ('pdf' in file[8] or 'msword' in file[8] or 'officedocument' in file[8] or 'text/plain' in file[8] or 'rtf' in file[8]) %}
+                                        <div class="document-preview-container" style="position: relative;">
+                                            {% if 'pdf' in file[8] %}
+                                                <i class="fas fa-file-pdf text-danger document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% elif 'msword' in file[8] or 'officedocument.wordprocessingml' in file[8] %}
+                                                <i class="fas fa-file-word text-primary document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% elif 'ms-excel' in file[8] or 'officedocument.spreadsheetml' in file[8] %}
+                                                <i class="fas fa-file-excel text-success document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% elif 'ms-powerpoint' in file[8] or 'officedocument.presentationml' in file[8] %}
+                                                <i class="fas fa-file-powerpoint text-warning document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% elif 'text/plain' in file[8] %}
+                                                <i class="fas fa-file-alt text-info document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% elif 'rtf' in file[8] %}
+                                                <i class="fas fa-file-alt text-secondary document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% else %}
+                                                <i class="fas fa-file-pdf text-danger document-icon" 
+                                                   onclick="showDocumentPreview({{ file[0] }}, '{{ file[5] }}')" 
+                                                   title="Click to preview first page" 
+                                                   style="cursor: pointer;"></i>
+                                            {% endif %}
+                                        </div>
                                     {% elif file[8] and 'zip' in file[8] %}
                                         <i class="fas fa-file-archive text-warning"></i>
                                     {% else %}
@@ -485,6 +521,37 @@ function showImagePreview(imageUrl, fileName) {
         previewImage.style.opacity = '1';
         previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';
         previewImage.alt = 'Image not available';
+    };
+    
+    modal.show();
+}
+
+function showDocumentPreview(fileId, fileName) {
+    const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+    const previewImage = document.getElementById('previewImage');
+    const imageFileNameSpan = document.getElementById('imageFileName');
+    const downloadBtn = document.getElementById('downloadImageBtn');
+    
+    // Set preview URL and filename
+    const previewUrl = `/preview/${fileId}`;
+    previewImage.src = previewUrl;
+    previewImage.alt = `Preview of ${fileName}`;
+    imageFileNameSpan.textContent = `${fileName} (First Page Preview)`;
+    downloadBtn.href = previewUrl;
+    
+    // Show loading state
+    previewImage.style.opacity = '0.5';
+    
+    // Handle preview load
+    previewImage.onload = function() {
+        previewImage.style.opacity = '1';
+    };
+    
+    // Handle preview error
+    previewImage.onerror = function() {
+        previewImage.style.opacity = '1';
+        previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlByZXZpZXcgbm90IGF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=';
+        previewImage.alt = 'Preview not available';
     };
     
     modal.show();

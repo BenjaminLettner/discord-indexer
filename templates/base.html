@@ -274,6 +274,207 @@
             color: #00d4ff !important;
         }
         
+        /* Table column width optimization and text truncation */
+        .table {
+            table-layout: fixed;
+            width: 100%;
+            margin-bottom: 0.5rem !important; /* Reduce bottom margin */
+        }
+        
+        /* Reduce table row spacing - more aggressive overrides */
+        .table td, .table th {
+            padding: 0.25rem 0.5rem !important; /* More aggressive reduction */
+            vertical-align: middle;
+            border-top: 1px solid var(--border-color);
+            line-height: 1.2 !important; /* Tighter line height */
+        }
+        
+        .table tbody tr {
+            border-bottom: none; /* Remove extra borders */
+        }
+        
+        /* Extra compact for table-sm */
+        .table-sm td, .table-sm th {
+            padding: 0.2rem 0.4rem !important; /* Even tighter for small tables */
+            font-size: 0.875rem; /* Slightly smaller font */
+        }
+        
+        /* Compact image thumbnails */
+        .image-thumbnail {
+            width: 24px !important;
+            height: 24px !important;
+            object-fit: cover;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .file-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .file-icon i {
+            font-size: 16px;
+        }
+        
+        /* Reduce spacing in flex containers within table cells */
+        .table td .d-flex {
+            gap: 0.25rem !important;
+        }
+        
+        /* Tighter spacing for file icons and content */
+        .table .file-icon, .table .link-icon {
+            margin-right: 0.25rem !important;
+        }
+        
+        /* Reduce badge spacing */
+        .table .badge {
+            padding: 0.2rem 0.4rem !important;
+            font-size: 0.75rem !important;
+        }
+        
+        /* Tighter button groups */
+        .table .btn-group-sm .btn {
+            padding: 0.15rem 0.3rem !important;
+            font-size: 0.75rem !important;
+        }
+        
+        .table th:nth-child(1), .table td:nth-child(1) { /* File/Link column */
+            width: 30%;
+            max-width: 250px;
+        }
+        .table th:nth-child(2), .table td:nth-child(2) { /* Author column */
+            width: 12%;
+            max-width: 120px;
+        }
+        .table th:nth-child(3), .table td:nth-child(3) { /* Channel column */
+            width: 15%;
+            max-width: 150px;
+        }
+        .table th:nth-child(4), .table td:nth-child(4) { /* Size/URL column */
+            width: 15%;
+            max-width: 150px;
+        }
+        .table th:nth-child(5), .table td:nth-child(5) { /* Type column */
+            width: 10%;
+            max-width: 100px;
+        }
+        .table th:nth-child(6), .table td:nth-child(6) { /* Tags column */
+            width: 12%;
+            max-width: 120px;
+        }
+        .table th:nth-child(7), .table td:nth-child(7) { /* Date column */
+            width: 10%;
+            max-width: 100px;
+        }
+        .table th:nth-child(8), .table td:nth-child(8) { /* Actions column */
+            width: 6%;
+            max-width: 80px;
+        }
+        
+        /* Text truncation for file names and links in first column */
+        .table td:nth-child(1) .fw-bold {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        .table td:nth-child(1) .text-muted {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        /* Text truncation for channel names and server names */
+        .table td:nth-child(3) .fw-bold {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        .table td:nth-child(3) .text-muted {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        /* Text truncation for URLs in links table */
+        .table td:nth-child(4) .badge {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 200px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 100px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 120px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 150px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 80px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 100px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 120px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 60px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 80px;
+            }
+        }
+        
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 1200px) {
+            .table th:nth-child(1), .table td:nth-child(1) { width: 30%; }
+            .table th:nth-child(3), .table td:nth-child(3) { width: 12%; }
+            .table th:nth-child(6), .table td:nth-child(6) { width: 10%; }
+        }
+        
+        @media (max-width: 992px) {
+            .table th:nth-child(1), .table td:nth-child(1) { width: 25%; }
+            .table th:nth-child(2), .table td:nth-child(2) { width: 8%; }
+            .table th:nth-child(3), .table td:nth-child(3) { width: 10%; }
+            .table th:nth-child(6), .table td:nth-child(6) { width: 8%; }
+        }
+
         /* Footer styling */
         footer {
             background-color: var(--footer-bg);

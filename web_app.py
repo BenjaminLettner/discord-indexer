@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+import requests
 import sqlite3
 import json
 import hashlib
@@ -10,6 +11,11 @@ import os
 from urllib.parse import urlparse
 import logging
 from user_manager import UserManager
+import tempfile
+import io
+from PIL import Image
+from pdf2image import convert_from_path
+import subprocess
 
 # Load configuration
 with open('config.json', 'r') as f:
@@ -923,6 +929,148 @@ def terms_of_service():
 def privacy_policy():
     """Privacy Policy page"""
     return render_template('privacy.html')
+
+@app.route('/preview/<int:file_id>')
+@login_required
+def preview_file(file_id):
+    """Generate and serve a preview image for documents"""
+    try:
+        # Get file information from database
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT filename, file_url, file_type FROM indexed_files WHERE id = ?', (file_id,))
+        file_data = cursor.fetchone()
+        conn.close()
+        
+        if not file_data:
+            return "File not found", 404
+            
+        filename, file_url, file_type = file_data
+        
+        # Check if this is a document type that can be previewed
+        preview_supported_types = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain',
+            'application/rtf'
+        ]
+        
+        if file_type not in preview_supported_types:
+            return "Preview not supported for this file type", 400
+            
+        # Download the file temporarily
+        response = requests.get(file_url)
+        if response.status_code != 200:
+            return "Could not download file", 400
+            
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+            temp_file.write(response.content)
+            temp_file_path = temp_file.name
+            
+        try:
+            preview_image = None
+            
+            if file_type == 'application/pdf':
+                # Handle PDF files with pdf2image
+                try:
+                    images = convert_from_path(temp_file_path, first_page=1, last_page=1, dpi=150)
+                    if images:
+                        preview_image = images[0]
+                except Exception as e:
+                    logging.error(f"Error converting PDF to image: {str(e)}")
+                    return "Error generating PDF preview", 500
+                    
+            elif file_type in ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                             'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                             'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']:
+                # Handle Office documents by converting to PDF first, then to image
+                try:
+                    # Convert to PDF using LibreOffice
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        result = subprocess.run([
+                            'libreoffice', '--headless', '--convert-to', 'pdf',
+                            '--outdir', temp_dir, temp_file_path
+                        ], capture_output=True, text=True, timeout=30)
+                        
+                        if result.returncode == 0:
+                            # Find the generated PDF
+                            pdf_name = os.path.splitext(os.path.basename(temp_file_path))[0] + '.pdf'
+                            pdf_path = os.path.join(temp_dir, pdf_name)
+                            
+                            if os.path.exists(pdf_path):
+                                # Convert PDF to image
+                                images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=150)
+                                if images:
+                                    preview_image = images[0]
+                        else:
+                            logging.error(f"LibreOffice conversion failed: {result.stderr}")
+                            return "Error converting document to preview", 500
+                except subprocess.TimeoutExpired:
+                    return "Document conversion timeout", 500
+                except Exception as e:
+                    logging.error(f"Error converting document: {str(e)}")
+                    return "Error generating document preview", 500
+                    
+            elif file_type == 'text/plain':
+                # Handle text files by creating a simple image
+                try:
+                    with open(temp_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read(2000)  # Read first 2000 characters
+                    
+                    # Create a simple text preview image
+                    from PIL import Image, ImageDraw, ImageFont
+                    
+                    img_width, img_height = 800, 600
+                    preview_image = Image.new('RGB', (img_width, img_height), color='white')
+                    draw = ImageDraw.Draw(preview_image)
+                    
+                    try:
+                        font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 12)
+                    except:
+                        font = ImageFont.load_default()
+                    
+                    # Split content into lines and draw
+                    lines = content.split('\n')[:40]  # First 40 lines
+                    y_offset = 10
+                    for line in lines:
+                        if y_offset > img_height - 20:
+                            break
+                        draw.text((10, y_offset), line[:100], fill='black', font=font)  # First 100 chars per line
+                        y_offset += 15
+                        
+                except Exception as e:
+                    logging.error(f"Error creating text preview: {str(e)}")
+                    return "Error generating text preview", 500
+            
+            if preview_image:
+                # Convert PIL image to JPEG and return
+                img_io = io.BytesIO()
+                preview_image.save(img_io, 'JPEG', quality=85)
+                img_io.seek(0)
+                
+                return send_file(
+                    img_io,
+                    mimetype='image/jpeg',
+                    as_attachment=False
+                )
+            else:
+                return "Could not generate preview", 500
+                
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        logging.error(f"Error in preview_file for file {file_id}: {str(e)}")
+        return "Internal server error", 500
+
 
 if __name__ == '__main__':
     # Create templates directory if it doesn't exist
