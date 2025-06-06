@@ -193,7 +193,7 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 {% for tag in file[12] %}
-                                <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
+                                <span class="badge tag-badge" style="background-color: {{ tag[2] }}; color: white;">
                                     {{ tag[1] }}
                                 </span>
                                 {% endfor %}
@@ -595,7 +595,7 @@ function loadCurrentTags() {
                     console.log(`Tag ${index}:`, tag);
                     
                     const badge = document.createElement('span');
-                    badge.className = 'badge me-2 mb-2 d-inline-flex align-items-center';
+                    badge.className = 'badge tag-badge me-2 mb-2 d-inline-flex align-items-center';
                     badge.style.backgroundColor = tag.color;
                     badge.style.color = 'white';
                     badge.innerHTML = `

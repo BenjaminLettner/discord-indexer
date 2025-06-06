@@ -35,7 +35,7 @@
                             {% for tag in tags %}
                             <tr>
                                 <td>
-                                    <span class="badge" style="background-color: {{ tag[2] }}; color: white;">
+                                    <span class="badge tag-badge" style="background-color: {{ tag[2] }}; color: white;">
                                         {{ tag[1] }}
                                     </span>
                                 </td>
@@ -45,9 +45,25 @@
                                         <code>{{ tag[2] }}</code>
                                     </div>
                                 </td>
-                                <td>{{ tag[3] or 'No description' }}</td>
-                                <td>{{ tag[4] }}</td>
                                 <td>
+                                    <span id="desc-{{ tag[0] }}">{{ tag[3] or 'No description' }}</span>
+                                    <input type="text" id="desc-input-{{ tag[0] }}" class="form-control form-control-sm" 
+                                           value="{{ tag[3] or '' }}" style="display: none;" maxlength="255">
+                                </td>
+                                <td>{{ tag[4].split('.')[0] if tag[4] else 'Unknown' }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editDescription({{ tag[0] }})"
+                                            id="edit-btn-{{ tag[0] }}" title="Edit description">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success me-1" onclick="saveDescription({{ tag[0] }})"
+                                            id="save-btn-{{ tag[0] }}" title="Save description" style="display: none;">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary me-1" onclick="cancelEdit({{ tag[0] }})"
+                                            id="cancel-btn-{{ tag[0] }}" title="Cancel edit" style="display: none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-danger" onclick="deleteTag({{ tag[0] }}, '{{ tag[1] }}')"
                                             title="Delete tag">
                                         <i class="fas fa-trash"></i>
@@ -100,7 +116,7 @@
                     <div class="mb-3">
                         <label class="form-label">Preview</label>
                         <div>
-                            <span class="badge" id="tagPreview" style="background-color: #007bff; color: white;">Tag Name</span>
+                            <span class="badge tag-badge" id="tagPreview" style="background-color: #007bff; color: white;">Tag Name</span>
                         </div>
                     </div>
                 </form>
@@ -178,6 +194,66 @@ function createTag() {
         console.error('Error:', error);
         alert('Error creating tag');
     });
+}
+
+function editDescription(tagId) {
+    const descSpan = document.getElementById(`desc-${tagId}`);
+    const descInput = document.getElementById(`desc-input-${tagId}`);
+    const editBtn = document.getElementById(`edit-btn-${tagId}`);
+    const saveBtn = document.getElementById(`save-btn-${tagId}`);
+    const cancelBtn = document.getElementById(`cancel-btn-${tagId}`);
+    
+    descSpan.style.display = 'none';
+    descInput.style.display = 'block';
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-block';
+    cancelBtn.style.display = 'inline-block';
+    
+    descInput.focus();
+}
+
+function saveDescription(tagId) {
+    const descInput = document.getElementById(`desc-input-${tagId}`);
+    const newDescription = descInput.value.trim();
+    
+    fetch(`/api/tags/${tagId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            description: newDescription
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error updating tag: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating tag');
+    });
+}
+
+function cancelEdit(tagId) {
+    const descSpan = document.getElementById(`desc-${tagId}`);
+    const descInput = document.getElementById(`desc-input-${tagId}`);
+    const editBtn = document.getElementById(`edit-btn-${tagId}`);
+    const saveBtn = document.getElementById(`save-btn-${tagId}`);
+    const cancelBtn = document.getElementById(`cancel-btn-${tagId}`);
+    
+    descSpan.style.display = 'block';
+    descInput.style.display = 'none';
+    editBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+    
+    // Reset input value to original
+    descInput.value = descInput.defaultValue;
 }
 
 function deleteTag(tagId, tagName) {

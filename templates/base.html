@@ -265,7 +265,8 @@
             color: var(--text-primary);
         }
         
-        [data-theme="dark"] .badge {
+        /* Only apply dark mode badge styling to badges without the tag-badge class */
+        [data-theme="dark"] .badge:not(.tag-badge) {
             background-color: var(--bg-secondary) !important;
             color: var(--text-primary) !important;
         }
@@ -277,7 +278,8 @@
             color: var(--text-primary) !important;
         }
         
-        [data-theme="dark"] .table-hover > tbody > tr:hover .badge {
+        /* Don't override tag badge colors on hover */
+        [data-theme="dark"] .table-hover > tbody > tr:hover .badge:not(.tag-badge) {
             background-color: var(--bg-secondary) !important;
             color: var(--text-primary) !important;
         }

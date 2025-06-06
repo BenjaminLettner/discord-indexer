@@ -286,7 +286,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         try:
-            cursor.execute('SELECT id, name, color, description FROM tags ORDER BY name')
+            cursor.execute('SELECT id, name, color, description, created_at FROM tags ORDER BY name')
             return cursor.fetchall()
         except Exception as e:
             print(f"Error getting tags: {e}")
@@ -309,6 +309,41 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error creating tag: {e}")
             return None
+        finally:
+            conn.close()
+    
+    def update_tag(self, tag_id, name=None, color=None, description=None):
+        """Update a tag's properties"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Build dynamic update query
+            updates = []
+            params = []
+            
+            if name is not None:
+                updates.append('name = ?')
+                params.append(name)
+            if color is not None:
+                updates.append('color = ?')
+                params.append(color)
+            if description is not None:
+                updates.append('description = ?')
+                params.append(description)
+            
+            if not updates:
+                return True  # Nothing to update
+            
+            params.append(tag_id)
+            query = f'UPDATE tags SET {', '.join(updates)} WHERE id = ?'
+            
+            cursor.execute(query, params)
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating tag: {e}")
+            return False
         finally:
             conn.close()
     
@@ -819,6 +854,23 @@ def create_tag():
         return jsonify({'success': True, 'tag_id': tag_id})
     else:
         return jsonify({'error': 'Failed to create tag'}), 500
+
+@app.route('/api/tags/<int:tag_id>', methods=['PUT'])
+@login_required
+def update_tag(tag_id):
+    """Update a tag (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    data = request.get_json()
+    name = data.get('name', '').strip() if data.get('name') else None
+    color = data.get('color') if data.get('color') else None
+    description = data.get('description', '').strip() if 'description' in data else None
+    
+    if db.update_tag(tag_id, name, color, description):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Failed to update tag'}), 500
 
 @app.route('/api/tags/<int:tag_id>', methods=['DELETE'])
 @login_required
