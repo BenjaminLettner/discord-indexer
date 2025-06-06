@@ -97,7 +97,9 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="fw-bold truncate" title="{{ link[5] }}">
-                                        {{ link[5][:80] }}{% if link[5]|length > 80 %}...{% endif %}
+                                        <a href="{{ link[5] }}" target="_blank" class="text-decoration-none clickable-link" style="color: inherit;">
+                                            {{ link[5][:80] }}{% if link[5]|length > 80 %}...{% endif %}
+                                        </a>
                                     </div>
                                     {% if link[7] %}
                                         <small class="text-muted truncate" title="{{ link[7] }}">{{ link[7][:100] }}{% if link[7]|length > 100 %}...{% endif %}</small>

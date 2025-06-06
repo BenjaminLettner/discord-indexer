@@ -184,7 +184,8 @@
                         </td>
                         <td>
                             {% if file[8] %}
-                                <span class="badge bg-secondary">{{ file[8].split('/')[-1] if '/' in file[8] else file[8] }}</span>
+                                {% set file_type = file[8].split('/')[-1] if '/' in file[8] else file[8] %}
+                                <span class="badge bg-secondary" title="{{ file_type }}">{{ file_type[:10] + '...' if file_type|length > 10 else file_type }}</span>
                             {% else %}
                                 <span class="text-muted">Unknown</span>
                             {% endif %}

@@ -268,7 +268,16 @@ def extract_urls(text):
     url_pattern = re.compile(
         r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     )
-    return url_pattern.findall(text)
+    urls = url_pattern.findall(text)
+    
+    # Clean up URLs by removing trailing punctuation that's commonly found at sentence ends
+    cleaned_urls = []
+    for url in urls:
+        # Remove trailing punctuation like ), ,, ., ;, :, !, ?
+        cleaned_url = re.sub(r'[),.:;!?]+$', '', url)
+        cleaned_urls.append(cleaned_url)
+    
+    return cleaned_urls
 
 async def process_message(message):
     """Process a message for attachments and links"""
