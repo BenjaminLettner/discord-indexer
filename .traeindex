@@ -1,0 +1,30 @@
+# Trae AI Indexing Configuration
+# This file helps configure workspace indexing
+
+# Include patterns
+include:
+  - "*.py"
+  - "*.html"
+  - "*.js"
+  - "*.css"
+  - "*.md"
+  - "*.txt"
+  - "*.json"
+  - "*.yml"
+  - "*.yaml"
+  - "*.sh"
+
+# Exclude patterns
+exclude:
+  - "venv/"
+  - "__pycache__/"
+  - "*.pyc"
+  - "*.log"
+  - "*.pid"
+  - "*.db"
+  - "*.tar.gz"
+  - "node_modules/"
+  - ".git/"
+  - "*.egg-info/"
+  - "build/"
+  - "dist/"

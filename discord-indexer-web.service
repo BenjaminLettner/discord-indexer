@@ -1,0 +1,27 @@
+[Unit]
+Description=Discord Indexer Web Interface
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/discord-indexer
+Environment=PYTHONPATH=/root/discord-indexer
+Environment=FLASK_APP=web_app.py
+Environment=FLASK_ENV=production
+ExecStart=/root/discord-indexer/venv/bin/python /root/discord-indexer/web_app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=discord-indexer-web
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/root/discord-indexer
+
+[Install]
+WantedBy=multi-user.target
