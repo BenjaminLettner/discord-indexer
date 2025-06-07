@@ -222,9 +222,22 @@
             color: var(--text-primary);
         }
         
+        [data-theme="dark"] .table-striped > tbody > tr > td,
+        [data-theme="dark"] .table-striped > tbody > tr > th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        
         [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > td,
         [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > th {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > td,
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
         }
         
         [data-theme="dark"] .form-control,
@@ -265,8 +278,8 @@
             color: var(--text-primary);
         }
         
-        /* Only apply dark mode badge styling to badges without the tag-badge class */
-        [data-theme="dark"] .badge:not(.tag-badge) {
+        /* Only apply dark mode badge styling to badges without the tag-badge class and Bootstrap color classes */
+        [data-theme="dark"] .badge:not(.tag-badge):not(.bg-danger):not(.bg-secondary):not(.bg-success):not(.bg-warning):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
             background-color: var(--bg-secondary) !important;
             color: var(--text-primary) !important;
         }
@@ -278,8 +291,8 @@
             color: var(--text-primary) !important;
         }
         
-        /* Don't override tag badge colors on hover */
-        [data-theme="dark"] .table-hover > tbody > tr:hover .badge:not(.tag-badge) {
+        /* Don't override tag badge colors and Bootstrap badge colors on hover */
+        [data-theme="dark"] .table-hover > tbody > tr:hover .badge:not(.tag-badge):not(.bg-danger):not(.bg-secondary):not(.bg-success):not(.bg-warning):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
             background-color: var(--bg-secondary) !important;
             color: var(--text-primary) !important;
         }
