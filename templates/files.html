@@ -165,7 +165,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-light text-dark">{{ file[4] }}</span>
+                            <span class="badge bg-secondary" style="color: var(--text-vibrant-blue);">{{ file[4] }}</span>
                         </td>
                         <td>
                             <div>
@@ -193,7 +193,10 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 {% for tag in file[12] %}
-                                <span class="badge tag-badge" style="background-color: {{ tag[2] }}; color: white;">
+                                {% set tag_colors = ['#1e293b', '#374151', '#4b5563', '#6b7280', '#059669', '#0d9488', '#0891b2', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'] %}
+                                {% set color_index = loop.index0 % tag_colors|length %}
+                                {% set bg_color = tag_colors[color_index] %}
+                                <span class="badge tag-badge" style="background-color: {{ bg_color }}; color: var(--text-vibrant-blue); border: 1px solid var(--text-vibrant-blue);">
                                     {{ tag[1] }}
                                 </span>
                                 {% endfor %}
@@ -296,14 +299,14 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content bg-dark">
             <div class="modal-header border-secondary">
-                <h5 class="modal-title text-white" id="imagePreviewModalLabel">Image Preview</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" style="color: var(--text-vibrant-blue);" id="imagePreviewModalLabel">Image Preview</h5>
+                <button type="button" class="btn-close" style="filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center p-0">
                 <img id="previewImage" src="" alt="" class="img-fluid" style="max-height: 70vh; width: auto;">
             </div>
             <div class="modal-footer border-secondary justify-content-between">
-                <span id="imageFileName" class="text-white"></span>
+                <span id="imageFileName" style="color: var(--text-vibrant-blue);"></span>
                 <div>
                     <a id="downloadImageBtn" href="" target="_blank" class="btn btn-outline-primary btn-sm me-2">
                         <i class="fas fa-download"></i> Download
@@ -597,12 +600,13 @@ function loadCurrentTags() {
                     const badge = document.createElement('span');
                     badge.className = 'badge tag-badge me-2 mb-2 d-inline-flex align-items-center';
                     badge.style.backgroundColor = tag.color;
-                    badge.style.color = 'white';
+                    badge.style.color = 'var(--text-vibrant-blue)';
+                badge.style.border = '1px solid var(--text-vibrant-blue)';
                     badge.innerHTML = `
                         ${tag.name}
-                        <button type="button" class="btn-close btn-close-white ms-2" 
+                        <button type="button" class="btn-close ms-2" 
                                 onclick="removeTag(${tag.id})" 
-                                style="font-size: 0.7em;"></button>
+                                style="font-size: 0.7em; filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);"></button>
                     `;
                     container.appendChild(badge);
                 });

@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DataChad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Light mode colors */
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --card-border: rgba(0, 212, 255, 0.1);
+            --footer-bg: #f8f9fa;
+        }
+        
+        [data-theme="dark"] {
+            /* Dark mode colors */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: #404040;
+            --card-bg: #2d2d2d;
+            --card-border: rgba(0, 212, 255, 0.3);
+            --footer-bg: #2d2d2d;
+        }
+        
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #003d4d 0%, #0099cc 50%, #00d4ff 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 0.5rem;
+            margin: 0.2rem 0;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(0, 212, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        .main-content {
+            background-color: var(--bg-primary);
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border-radius: 0.75rem;
+            border: 1px solid var(--card-border);
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #003d4d 0%, #0099cc 50%, #00d4ff 100%);
+            color: white;
+        }
+        .file-icon {
+            width: 24px;
+            height: 24px;
+        }
+        .truncate {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Clickable link styles */
+        .clickable-link {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .clickable-link:hover {
+            color: #0d6efd !important;
+            text-decoration: underline !important;
+            transform: translateX(2px);
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        /* Cyber theme enhancements */
+        .cyber-icon {
+            filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.5));
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0099cc 0%, #00d4ff 100%);
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+        }
+        
+        /* Responsive table styling */
+        .table-responsive {
+            border-radius: 0.75rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 250px;
+                height: 100vh;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.show {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                width: 100%;
+            }
+            
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+            
+            .truncate {
+                max-width: 120px;
+            }
+            
+            .btn-group .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            h1.h2 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .table-responsive {
+                font-size: 0.75rem;
+            }
+            
+            .truncate {
+                max-width: 80px;
+            }
+            
+            .btn-toolbar .btn-group {
+                margin-bottom: 0.5rem;
+            }
+            
+            .stat-card .card-body {
+                padding: 0.75rem;
+            }
+        }
+        
+        /* Mobile menu toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+            background: #0099cc;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+        
+        /* Dark mode toggle button */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        
+        /* Dark mode styles for various elements */
+        [data-theme="dark"] .table {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr > td,
+        [data-theme="dark"] .table-striped > tbody > tr > th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > td,
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > td,
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > th {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: var(--bg-secondary);
+            border-color: #0099cc;
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(0, 153, 204, 0.25);
+        }
+        
+        [data-theme="dark"] .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        
+        [data-theme="dark"] .alert {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        /* Only apply dark mode badge styling to badges without the tag-badge class and Bootstrap color classes */
+        [data-theme="dark"] .badge:not(.tag-badge):not(.bg-danger):not(.bg-secondary):not(.bg-success):not(.bg-warning):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Fix table hover text color in dark mode */
+        [data-theme="dark"] .table-hover > tbody > tr:hover > td,
+        [data-theme="dark"] .table-hover > tbody > tr:hover > th {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Don't override tag badge colors and Bootstrap badge colors on hover */
+        [data-theme="dark"] .table-hover > tbody > tr:hover .badge:not(.tag-badge):not(.bg-danger):not(.bg-secondary):not(.bg-success):not(.bg-warning):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .table-hover > tbody > tr:hover a {
+            color: #00d4ff !important;
+        }
+        
+        /* Table column width optimization and text truncation */
+        .table {
+            table-layout: fixed;
+            width: 100%;
+            margin-bottom: 0.5rem !important; /* Reduce bottom margin */
+        }
+        
+        /* Reduce table row spacing - more aggressive overrides */
+        .table td, .table th {
+            padding: 0.25rem 0.5rem !important; /* More aggressive reduction */
+            vertical-align: middle;
+            border-top: 1px solid var(--border-color);
+            line-height: 1.2 !important; /* Tighter line height */
+        }
+        
+        .table tbody tr {
+            border-bottom: none; /* Remove extra borders */
+        }
+        
+        /* Extra compact for table-sm */
+        .table-sm td, .table-sm th {
+            padding: 0.2rem 0.4rem !important; /* Even tighter for small tables */
+            font-size: 0.875rem; /* Slightly smaller font */
+        }
+        
+        /* Compact image thumbnails */
+        .image-thumbnail {
+            width: 24px !important;
+            height: 24px !important;
+            object-fit: cover;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .file-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .file-icon i {
+            font-size: 16px;
+        }
+        
+        /* Reduce spacing in flex containers within table cells */
+        .table td .d-flex {
+            gap: 0.25rem !important;
+        }
+        
+        /* Tighter spacing for file icons and content */
+        .table .file-icon, .table .link-icon {
+            margin-right: 0.25rem !important;
+        }
+        
+        /* Reduce badge spacing */
+        .table .badge {
+            padding: 0.2rem 0.4rem !important;
+            font-size: 0.75rem !important;
+        }
+        
+        /* Tighter button groups */
+        .table .btn-group-sm .btn {
+            padding: 0.15rem 0.3rem !important;
+            font-size: 0.75rem !important;
+        }
+        
+        .table th:nth-child(1), .table td:nth-child(1) { /* File/Link column */
+            width: 30%;
+            max-width: 250px;
+        }
+        .table th:nth-child(2), .table td:nth-child(2) { /* Author column */
+            width: 12%;
+            max-width: 120px;
+        }
+        .table th:nth-child(3), .table td:nth-child(3) { /* Channel column */
+            width: 15%;
+            max-width: 150px;
+        }
+        .table th:nth-child(4), .table td:nth-child(4) { /* Size/URL column */
+            width: 15%;
+            max-width: 150px;
+        }
+        .table th:nth-child(5), .table td:nth-child(5) { /* Type column */
+            width: 10%;
+            max-width: 100px;
+        }
+        .table th:nth-child(6), .table td:nth-child(6) { /* Tags column */
+            width: 12%;
+            max-width: 120px;
+        }
+        .table th:nth-child(7), .table td:nth-child(7) { /* Date column */
+            width: 10%;
+            max-width: 100px;
+        }
+        .table th:nth-child(8), .table td:nth-child(8) { /* Actions column */
+            width: 6%;
+            max-width: 80px;
+        }
+        
+        /* Text truncation for file names and links in first column */
+        .table td:nth-child(1) .fw-bold {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        .table td:nth-child(1) .text-muted {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        /* Text truncation for channel names and server names */
+        .table td:nth-child(3) .fw-bold {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        .table td:nth-child(3) .text-muted {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: block;
+        }
+        
+        /* Text truncation for URLs in links table */
+        .table td:nth-child(4) .badge {
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 200px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 100px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 120px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 150px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 80px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 100px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .table td:nth-child(1) .fw-bold,
+            .table td:nth-child(1) .text-muted {
+                max-width: 120px;
+            }
+            .table td:nth-child(3) .fw-bold,
+            .table td:nth-child(3) .text-muted {
+                max-width: 60px;
+            }
+            .table td:nth-child(4) .badge {
+                max-width: 80px;
+            }
+        }
+        
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 1200px) {
+            .table th:nth-child(1), .table td:nth-child(1) { width: 30%; }
+            .table th:nth-child(3), .table td:nth-child(3) { width: 12%; }
+            .table th:nth-child(6), .table td:nth-child(6) { width: 10%; }
+        }
+        
+        @media (max-width: 992px) {
+            .table th:nth-child(1), .table td:nth-child(1) { width: 25%; }
+            .table th:nth-child(2), .table td:nth-child(2) { width: 8%; }
+            .table th:nth-child(3), .table td:nth-child(3) { width: 10%; }
+            .table th:nth-child(6), .table td:nth-child(6) { width: 8%; }
+        }
+
+        /* Footer styling */
+        footer {
+            background-color: var(--footer-bg);
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        footer .text-muted a {
+            color: #6c757d !important;
+            transition: color 0.3s ease;
+        }
+        
+        footer .text-muted a:hover {
+            color: #0099cc !important;
+        }
+        
+        /* Cookie Banner Styling */
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #003d4d 0%, #0099cc 50%, #00d4ff 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1050;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .cookie-banner.show {
+            transform: translateY(0);
+        }
+        
+        .cookie-banner .btn {
+            margin: 0 0.25rem;
+        }
+        
+        .cookie-banner .btn-light {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: none;
+            color: #003d4d;
+        }
+        
+        .cookie-banner .btn-light:hover {
+            background-color: white;
+            color: #003d4d;
+        }
+        
+        .cookie-banner .btn-outline-light {
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+        }
+        
+        .cookie-banner .btn-outline-light:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    
+    
+    <div class="container-fluid">
+        <div class="row">
+            
+            <main class="col-12 main-content">
+            
+                <!-- Flash messages -->
+                
+                    
+                        <div class="mt-3">
+                            
+                                <div class="alert alert-message alert-dismissible fade show" role="alert">
+                                    Please log in to access this page.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            
+                        </div>
+                    
+                
+                
+                
+<div class="container-fluid h-100">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <img src="/static/DataChad.png" alt="DataChad" class="cyber-icon mb-3" style="width: 64px; height: 64px;">
+                        <h2 class="card-title">DataChad</h2>
+                        <p class="text-muted">Sign in to access the dashboard</p>
+                    </div>
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user"></i> Username
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock"></i> Password
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">
+                                Remember me
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Sign In
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Discord OAuth Login -->
+                    
+                    <div class="text-center my-3">
+                        <div class="divider">
+                            <span class="divider-text">OR</span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <a href="/auth/discord" class="btn btn-discord btn-lg">
+                            <i class="fab fa-discord"></i> Sign in with Discord
+                        </a>
+                    </div>
+                    
+                    
+                    <!-- Footer links -->
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            <a href="/terms" class="text-decoration-none me-3">
+                                <i class="fas fa-file-contract"></i> Terms of Service
+                            </a>
+                            <a href="/privacy" class="text-decoration-none">
+                                <i class="fas fa-shield-alt"></i> Privacy Policy
+                            </a>
+                        </small>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+body {
+    background: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0f1419 100%);
+    min-height: 100vh;
+}
+
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+.card {
+    border-radius: 1rem;
+    background: rgba(26, 35, 50, 0.95);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
+}
+
+.card-title {
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.text-muted {
+    color: #8892b0 !important;
+}
+
+.form-label {
+    color: #ccd6f6;
+}
+
+.form-control {
+    background: rgba(15, 20, 25, 0.8);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    color: #ccd6f6;
+}
+
+.form-control:focus {
+    background: rgba(15, 20, 25, 0.9);
+    border-color: #00ffff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.form-control::placeholder {
+    color: #8892b0;
+}
+
+.form-check-label {
+    color: #ccd6f6;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0066cc 0%, #00ffff 100%);
+    border: none;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0080ff 0%, #66ffff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+}
+
+.cyber-icon {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.7));
+    transition: all 0.3s ease;
+}
+
+.cyber-icon:hover {
+    filter: drop-shadow(0 0 20px rgba(0, 255, 255, 1));
+    transform: scale(1.05);
+}
+
+.text-muted a {
+    color: #8892b0 !important;
+    transition: color 0.3s ease;
+}
+
+.text-muted a:hover {
+    color: #00ffff !important;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.btn-discord {
+    background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-discord:hover {
+    background: linear-gradient(135deg, #6b7aff 0%, #8fa3ff 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(88, 101, 242, 0.5);
+    color: white;
+}
+
+.divider {
+    position: relative;
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3), transparent);
+}
+
+.divider-text {
+    background: rgba(26, 35, 50, 0.95);
+    padding: 0 1rem;
+    color: #8892b0;
+    font-size: 0.875rem;
+}
+</style>
+
+                
+                <!-- Footer for authenticated users -->
+                
+            </main>
+        </div>
+    </div>
+    
+    <!-- Cookie Banner -->
+    <div id="cookieBanner" class="cookie-banner">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-8 col-12 mb-2 mb-md-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cookie-bite me-2"></i>
+                        <span>
+                            We use cookies to enhance your experience. By continuing to use this site, you agree to our 
+                            <a href="/terms" class="text-white text-decoration-underline" target="_blank">
+                                <strong>Terms of Service</strong>
+                            </a> and 
+                            <a href="/privacy" class="text-white text-decoration-underline" target="_blank">
+                                <strong>Privacy Policy</strong>
+                            </a>.
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4 col-12 text-md-end text-center">
+                    <button type="button" class="btn btn-outline-light btn-sm me-2" onclick="declineCookies()">
+                        <i class="fas fa-times me-1"></i>Decline
+                    </button>
+                    <button type="button" class="btn btn-light btn-sm" onclick="acceptCookies()">
+                        <i class="fas fa-check me-1"></i>Accept All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('show');
+        }
+        
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (window.innerWidth <= 768 && sidebar && toggle) {
+                if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+        
+        // Cookie Banner Functionality
+        function showCookieBanner() {
+            const banner = document.getElementById('cookieBanner');
+            if (banner) {
+                banner.classList.add('show');
+            }
+        }
+        
+        function hideCookieBanner() {
+            const banner = document.getElementById('cookieBanner');
+            if (banner) {
+                banner.classList.remove('show');
+            }
+        }
+        
+        function acceptCookies() {
+            localStorage.setItem('cookieConsent', 'accepted');
+            localStorage.setItem('cookieConsentDate', new Date().toISOString());
+            hideCookieBanner();
+            
+            // Show success message
+            showToast('Cookie preferences saved successfully!', 'success');
+        }
+        
+        function declineCookies() {
+            localStorage.setItem('cookieConsent', 'declined');
+            localStorage.setItem('cookieConsentDate', new Date().toISOString());
+            hideCookieBanner();
+            
+            // Show info message
+            showToast('Cookie preferences saved. Some features may be limited.', 'info');
+        }
+        
+        function showToast(message, type = 'info') {
+            // Create toast element
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'info'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '1060';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = toastContainer.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+            toast.show();
+            
+            // Remove toast element after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+        
+        // Check cookie consent on page load
+         document.addEventListener('DOMContentLoaded', function() {
+             const consent = localStorage.getItem('cookieConsent');
+             const consentDate = localStorage.getItem('cookieConsentDate');
+             
+             console.log('Cookie consent check:', consent, consentDate); // Debug log
+             
+             // Show banner if no consent or consent is older than 30 days
+             if (!consent || !consentDate) {
+                 console.log('No consent found, showing banner'); // Debug log
+                 setTimeout(showCookieBanner, 500); // Show after 0.5 seconds
+             } else {
+                 const thirtyDaysAgo = new Date();
+                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                 
+                 if (new Date(consentDate) < thirtyDaysAgo) {
+                     console.log('Consent expired, showing banner'); // Debug log
+                     setTimeout(showCookieBanner, 500); // Re-ask consent after 30 days
+                 } else {
+                     console.log('Valid consent found, not showing banner'); // Debug log
+                 }
+             }
+         });
+         
+         // Force show banner for testing (remove this in production)
+         window.testShowBanner = function() {
+             localStorage.removeItem('cookieConsent');
+             localStorage.removeItem('cookieConsentDate');
+             showCookieBanner();
+         };
+         
+         // Dark mode functionality
+         function toggleTheme() {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+             
+             document.documentElement.setAttribute('data-theme', newTheme);
+             localStorage.setItem('theme', newTheme);
+             
+             updateThemeIcon(newTheme);
+         }
+         
+         function updateThemeIcon(theme) {
+             const icon = document.getElementById('themeIcon');
+             const text = document.getElementById('themeText');
+             
+             if (theme === 'dark') {
+                 icon.className = 'fas fa-sun';
+                 text.textContent = 'Light Mode';
+             } else {
+                 icon.className = 'fas fa-moon';
+                 text.textContent = 'Dark Mode';
+             }
+         }
+         
+         // Initialize theme on page load
+         document.addEventListener('DOMContentLoaded', function() {
+             const savedTheme = localStorage.getItem('theme') || 'light';
+             document.documentElement.setAttribute('data-theme', savedTheme);
+             updateThemeIcon(savedTheme);
+         });
+    </script>
+    
+    
+</body>
+</html>

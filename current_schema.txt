@@ -1,0 +1,195 @@
+CREATE TABLE indexed_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            channel_name TEXT,
+            guild_id TEXT,
+            guild_name TEXT,
+            author_id TEXT NOT NULL,
+            author_name TEXT,
+            filename TEXT NOT NULL,
+            file_url TEXT NOT NULL,
+            file_size INTEGER,
+            file_type TEXT,
+            message_content TEXT,
+            timestamp DATETIME NOT NULL,
+            indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(message_id, file_url)
+        );
+CREATE TABLE sqlite_sequence(name,seq);
+CREATE TABLE indexed_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            channel_name TEXT,
+            guild_id TEXT,
+            guild_name TEXT,
+            author_id TEXT NOT NULL,
+            author_name TEXT,
+            link_url TEXT NOT NULL,
+            link_domain TEXT,
+            message_content TEXT,
+            timestamp DATETIME NOT NULL,
+            indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(message_id, link_url)
+        );
+CREATE TABLE indexing_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    operation_type TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT,
+    files_processed INTEGER DEFAULT 0,
+    links_processed INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'running',
+    error_message TEXT
+);
+
+CREATE TABLE file_content (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id INTEGER NOT NULL,
+    content_text TEXT,
+    extraction_method TEXT,
+    extracted_at TEXT NOT NULL,
+    file_size_bytes INTEGER,
+    FOREIGN KEY (file_id) REFERENCES indexed_files (id) ON DELETE CASCADE,
+    UNIQUE(file_id)
+);
+CREATE INDEX idx_files_channel ON indexed_files(channel_id);
+CREATE INDEX idx_files_author ON indexed_files(author_id);
+CREATE INDEX idx_files_timestamp ON indexed_files(timestamp);
+CREATE INDEX idx_links_channel ON indexed_links(channel_id);
+CREATE INDEX idx_links_author ON indexed_links(author_id);
+CREATE INDEX idx_links_timestamp ON indexed_links(timestamp);
+CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            email TEXT,
+            is_admin BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP,
+            is_active BOOLEAN DEFAULT 1
+        , discord_id TEXT, avatar_url TEXT, auth_method TEXT DEFAULT 'local');
+CREATE TABLE tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(50) UNIQUE NOT NULL,
+            color VARCHAR(7) DEFAULT '#007bff',
+            description TEXT,
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users (id)
+        );
+CREATE TABLE file_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            added_by INTEGER,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (file_id) REFERENCES indexed_files (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users (id),
+            UNIQUE(file_id, tag_id)
+        );
+CREATE TABLE link_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            link_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            added_by INTEGER,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (link_id) REFERENCES indexed_links (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users (id),
+            UNIQUE(link_id, tag_id)
+        );
+CREATE TABLE filter_presets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(100) NOT NULL,
+            description TEXT,
+            filter_type VARCHAR(20) NOT NULL CHECK (filter_type IN ('files', 'links', 'both')),
+            search_term TEXT,
+            file_type TEXT,
+            domain TEXT,
+            tag_ids TEXT,  -- JSON array of tag IDs
+            created_by INTEGER,
+            is_public BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users (id)
+        );
+CREATE INDEX idx_file_tags_file ON file_tags(file_id);
+CREATE INDEX idx_file_tags_tag ON file_tags(tag_id);
+CREATE INDEX idx_link_tags_link ON link_tags(link_id);
+CREATE INDEX idx_link_tags_tag ON link_tags(tag_id);
+CREATE TABLE signal_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone_number TEXT UNIQUE NOT NULL,
+            signal_cli_path TEXT NOT NULL,
+            auto_sync BOOLEAN DEFAULT 1,
+            connected BOOLEAN DEFAULT 0,
+            last_sync DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+CREATE TABLE signal_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT UNIQUE NOT NULL,
+            conversation_name TEXT,
+            conversation_type TEXT DEFAULT 'private',
+            participants TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+CREATE TABLE signal_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            conversation_name TEXT,
+            sender_number TEXT NOT NULL,
+            sender_name TEXT,
+            filename TEXT NOT NULL,
+            file_path TEXT,
+            file_size INTEGER,
+            file_type TEXT,
+            message_content TEXT,
+            timestamp DATETIME NOT NULL,
+            indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES signal_conversations (conversation_id),
+            UNIQUE(message_id, filename)
+        );
+CREATE TABLE signal_links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            conversation_id TEXT NOT NULL,
+            conversation_name TEXT,
+            sender_number TEXT NOT NULL,
+            sender_name TEXT,
+            link_url TEXT NOT NULL,
+            link_domain TEXT,
+            message_content TEXT,
+            timestamp DATETIME NOT NULL,
+            indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES signal_conversations (conversation_id),
+            UNIQUE(message_id, link_url)
+        );
+CREATE TABLE signal_file_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            added_by INTEGER,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (file_id) REFERENCES signal_files (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users (id),
+            UNIQUE(file_id, tag_id)
+        );
+CREATE TABLE signal_link_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            link_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            added_by INTEGER,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (link_id) REFERENCES signal_links (id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users (id),
+            UNIQUE(link_id, tag_id)
+        );
+CREATE UNIQUE INDEX idx_users_discord_id ON users(discord_id) WHERE discord_id IS NOT NULL;

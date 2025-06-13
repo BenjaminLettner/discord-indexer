@@ -108,7 +108,7 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-light text-dark">{{ link[4] }}</span>
+                            <span class="badge bg-secondary" style="color: var(--text-vibrant-blue);">{{ link[4] }}</span>
                         </td>
                         <td>
                             <div>
@@ -128,9 +128,12 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 {% for tag in link[10] %}
-                                <span class="badge tag-badge" style="background-color: {{ tag[2] }}; color: white;">
-                                    {{ tag[1] }}
-                                </span>
+                                {% set tag_colors = ['#1e293b', '#374151', '#4b5563', '#6b7280', '#059669', '#0d9488', '#0891b2', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'] %}
+                            {% set color_index = loop.index0 % tag_colors|length %}
+                            {% set bg_color = tag_colors[color_index] %}
+                            <span class="badge tag-badge" style="background-color: {{ bg_color }}; color: var(--text-vibrant-blue); border: 1px solid var(--text-vibrant-blue);">
+                                {{ tag[1] }}
+                            </span>
                                 {% endfor %}
                             </div>
                         </td>
@@ -465,12 +468,13 @@ function loadCurrentTags(linkId, type) {
                     const tagElement = document.createElement('span');
                     tagElement.className = 'badge tag-badge me-2 mb-2 d-inline-flex align-items-center';
                     tagElement.style.backgroundColor = tag.color;
-                    tagElement.style.color = 'white';
+                    tagElement.style.color = 'var(--text-vibrant-blue)';
+                tagElement.style.border = '1px solid var(--text-vibrant-blue)';
                     tagElement.innerHTML = `
                         ${tag.name}
-                        <button type="button" class="btn-close btn-close-white ms-2" 
+                        <button type="button" class="btn-close ms-2" 
                                 onclick="removeTag(${tag.id}, '${type}')" 
-                                style="font-size: 0.7em;"></button>
+                                style="font-size: 0.7em; filter: brightness(0) saturate(100%) invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);"></button>
                     `;
                     currentTagsContainer.appendChild(tagElement);
                 });

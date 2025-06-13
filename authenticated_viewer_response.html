@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Viewer - RSA.pdf</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .document-viewer {
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .main-viewer {
+            height: 100vh;
+            overflow-y: auto;
+            background-color: #e9ecef;
+        }
+        .page-container {
+            margin: 20px auto;
+            max-width: 800px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .page-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .page-text {
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .page-number {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #dc3545;
+        }
+        .toolbar {
+            background-color: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .zoom-level {
+            min-width: 60px;
+            text-align: center;
+        }
+        .page-navigation {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .thumbnail {
+            width: 100%;
+            max-width: 150px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+        }
+        .thumbnail.active {
+            border-color: #007bff;
+        }
+        .thumbnail:hover {
+            border-color: #6c757d;
+        }
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            background-color: white;
+        }
+        .file-info {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        .search-stamps {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            max-height: 60vh;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #dee2e6;
+            min-width: 120px;
+        }
+        .search-stamp {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 8px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .search-stamp:hover {
+            background: #0056b3;
+            transform: translateX(-2px);
+        }
+        .search-stamp.active {
+            background: #ff6b6b;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+        .stamps-header {
+            font-size: 11px;
+            font-weight: bold;
+            color: #6c757d;
+            margin-bottom: 8px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="document-viewer">
+        <div class="row g-0 h-100">
+            <!-- Sidebar with thumbnails -->
+            <div class="col-md-3 sidebar">
+                <div class="sidebar-header">
+                    <h6 class="mb-1">RSA.pdf</h6>
+                    <div class="file-info">
+                        <small>Type: application/pdf</small><br>
+                        <small>Size: 0.14 MB</small>
+                        
+                    </div>
+                </div>
+                <div class="p-3">
+                    <div id="thumbnails-container">
+                        <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading pages...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main viewer -->
+            <div class="col-md-9 main-viewer">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="page-navigation">
+                        <button class="btn btn-outline-secondary btn-sm" id="prev-page" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span id="page-info">Page 1 of 1</span>
+                        <button class="btn btn-outline-secondary btn-sm" id="next-page" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="zoom-controls">
+                        <button class="btn btn-outline-secondary btn-sm" id="zoom-out">
+                            <i class="fas fa-search-minus"></i>
+                        </button>
+                        <span class="zoom-level" id="zoom-level">100%</span>
+                        <button class="btn btn-outline-secondary btn-sm" id="zoom-in">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" id="fit-width">
+                            <i class="fas fa-arrows-alt-h"></i> Fit Width
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <a href="/ai-search" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Search
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Document content -->
+                <div id="document-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p>Loading document...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Navigation Stamps -->
+    <div id="search-stamps" class="search-stamps" style="display: none;">
+        <div class="stamps-header">Search Results</div>
+        <div id="stamps-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPages = [];
+        let currentPageIndex = 0;
+        let zoomLevel = 100;
+        
+        // Load document pages
+        async function loadDocument() {
+            try {
+                const response = await fetch(`/api/document_pages/11`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                currentPages = data.pages;
+                console.log('Loaded pages:', currentPages.length, currentPages);
+                renderThumbnails();
+                renderCurrentPage();
+                updateNavigation();
+                
+            } catch (error) {
+                showError('Failed to load document: ' + error.message);
+            }
+        }
+        
+        function renderThumbnails() {
+            const container = document.getElementById('thumbnails-container');
+            container.innerHTML = '';
+            
+            // Add search box
+            const searchDiv = document.createElement('div');
+            searchDiv.className = 'mb-3';
+            searchDiv.innerHTML = `
+                <input type="text" class="form-control form-control-sm" id="search-input" placeholder="Search in document...">
+                <div class="mt-2">
+                    <button class="btn btn-outline-secondary btn-sm" id="search-prev" disabled>
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="search-next" disabled>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <span class="ms-2" id="search-results"></span>
+                </div>
+            `;
+            container.appendChild(searchDiv);
+            
+            currentPages.forEach((page, index) => {
+                const thumbnailDiv = document.createElement('div');
+                thumbnailDiv.className = 'mb-2';
+                
+                if (page.is_text) {
+                    // Text page thumbnail
+                    const textPreview = document.createElement('div');
+                    textPreview.className = 'thumbnail';
+                    textPreview.style.cssText = 'border: 1px solid #ccc; padding: 10px; font-size: 8px; line-height: 1.2; overflow: hidden; height: 100px; background: white;';
+                    textPreview.textContent = page.text_content.substring(0, 200) + '...';
+                    textPreview.onclick = () => goToPage(index);
+                    thumbnailDiv.appendChild(textPreview);
+                } else {
+                    // Image page thumbnail
+                    const img = document.createElement('img');
+                    img.src = page.image_data;
+                    img.className = 'thumbnail';
+                    img.onclick = () => goToPage(index);
+                    thumbnailDiv.appendChild(img);
+                }
+                
+                const pageLabel = document.createElement('div');
+                pageLabel.className = 'text-center mt-1';
+                pageLabel.innerHTML = `<small>Page ${page.page_number}</small>`;
+                thumbnailDiv.appendChild(pageLabel);
+                
+                container.appendChild(thumbnailDiv);
+            });
+            
+            // Setup search functionality
+            setupSearch();
+        }
+        
+        function renderCurrentPage() {
+            const container = document.getElementById('document-content');
+            
+            if (currentPages.length === 0) {
+                container.innerHTML = '<div class="error">No pages to display</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            console.log('Rendering', currentPages.length, 'pages');
+            
+            // Render all pages
+            currentPages.forEach((page, index) => {
+                console.log('Rendering page', index + 1, 'of', currentPages.length);
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'page-container';
+                pageDiv.id = `page-${index}`;
+                
+                // Page number header
+                const pageNumber = document.createElement('div');
+                pageNumber.className = 'page-number';
+                pageNumber.textContent = `Page ${page.page_number}`;
+                pageDiv.appendChild(pageNumber);
+                
+                if (page.is_text) {
+                    // Text content
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'page-text';
+                    textDiv.textContent = page.text_content;
+                    pageDiv.appendChild(textDiv);
+                } else {
+                    // Image content
+                    const img = document.createElement('img');
+                    img.src = page.image_data;
+                    img.className = 'page-image';
+                    img.style.transform = `scale(${zoomLevel / 100})`;
+                    img.style.transformOrigin = 'top center';
+                    pageDiv.appendChild(img);
+                }
+                
+                container.appendChild(pageDiv);
+            });
+        }
+        
+        function updateNavigation() {
+            const pageInfo = document.getElementById('page-info');
+            pageInfo.textContent = `${currentPages.length} page${currentPages.length !== 1 ? 's' : ''} total`;
+            
+            // Hide navigation buttons since we show all pages
+            document.getElementById('prev-page').style.display = 'none';
+            document.getElementById('next-page').style.display = 'none';
+        }
+        
+        function goToPage(index) {
+            if (index >= 0 && index < currentPages.length) {
+                // Scroll to the specific page
+                const pageElement = document.getElementById(`page-${index}`);
+                if (pageElement) {
+                    pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
+                // Update thumbnail active state
+                document.querySelectorAll('.thumbnail').forEach((thumb, thumbIndex) => {
+                    thumb.classList.toggle('active', thumbIndex === index);
+                });
+            }
+        }
+        
+        function updateZoom() {
+            document.getElementById('zoom-level').textContent = zoomLevel + '%';
+            renderCurrentPage();
+        }
+        
+        function showError(message) {
+            document.getElementById('document-content').innerHTML = 
+                `<div class="error"><i class="fas fa-exclamation-triangle"></i><p>${message}</p></div>`;
+            document.getElementById('thumbnails-container').innerHTML = 
+                `<div class="error"><p>Failed to load</p></div>`;
+        }
+        
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchPrev = document.getElementById('search-prev');
+            const searchNext = document.getElementById('search-next');
+            const searchResultsSpan = document.getElementById('search-results');
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                if (query.length < 2) {
+                    clearSearch();
+                    return;
+                }
+                performSearch(query);
+            });
+            
+            searchPrev.addEventListener('click', () => {
+                if (searchResults.length > 0) {
+                    currentSearchIndex = (currentSearchIndex - 1 + searchResults.length) % searchResults.length;
+                    highlightSearchResult();
+                    updateActiveStamp();
+                }
+            });
+            
+            searchNext.addEventListener('click', () => {
+                if (searchResults.length > 0) {
+                    currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+                    highlightSearchResult();
+                    updateActiveStamp();
+                }
+            });
+        }
+        
+        function performSearch(query) {
+            clearSearch();
+            searchResults = [];
+            
+            currentPages.forEach((page, pageIndex) => {
+                if (page.is_text) {
+                    const text = page.text_content.toLowerCase();
+                    const searchQuery = query.toLowerCase();
+                    let index = 0;
+                    
+                    while ((index = text.indexOf(searchQuery, index)) !== -1) {
+                        // Get context around the match for the stamp
+                        const contextStart = Math.max(0, index - 20);
+                        const contextEnd = Math.min(text.length, index + searchQuery.length + 20);
+                        const context = page.text_content.substring(contextStart, contextEnd).trim();
+                        
+                        searchResults.push({ 
+                            pageIndex, 
+                            textIndex: index, 
+                            context: context,
+                            pageNumber: page.page_number
+                        });
+                        index += searchQuery.length;
+                    }
+                }
+            });
+            
+            updateSearchUI();
+            createSearchStamps();
+            if (searchResults.length > 0) {
+                currentSearchIndex = 0;
+                highlightSearchResult();
+            }
+        }
+        
+        function clearSearch() {
+            // Remove existing highlights
+            document.querySelectorAll('.search-highlight').forEach(el => {
+                const parent = el.parentNode;
+                parent.replaceChild(document.createTextNode(el.textContent), el);
+                parent.normalize();
+            });
+            
+            searchResults = [];
+            currentSearchIndex = -1;
+            updateSearchUI();
+            hideSearchStamps();
+        }
+        
+        function highlightSearchResult() {
+            if (currentSearchIndex < 0 || currentSearchIndex >= searchResults.length) return;
+            
+            const result = searchResults[currentSearchIndex];
+            const pageElement = document.getElementById(`page-${result.pageIndex}`);
+            
+            if (pageElement) {
+                // Scroll to the page
+                pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Highlight the text
+                const textDiv = pageElement.querySelector('.page-text');
+                if (textDiv) {
+                    const query = document.getElementById('search-input').value;
+                    highlightTextInElement(textDiv, query, currentSearchIndex);
+                }
+                
+                // Update active stamp
+                updateActiveStamp();
+            }
+        }
+        
+        function createSearchStamps() {
+            const stampsContainer = document.getElementById('stamps-container');
+            const searchStampsDiv = document.getElementById('search-stamps');
+            
+            if (searchResults.length === 0) {
+                hideSearchStamps();
+                return;
+            }
+            
+            stampsContainer.innerHTML = '';
+            
+            searchResults.forEach((result, index) => {
+                const stamp = document.createElement('button');
+                stamp.className = 'search-stamp';
+                stamp.setAttribute('data-index', index);
+                
+                // Create stamp text with page number and context
+                const stampText = `Page ${result.pageNumber}\n${result.context}`;
+                stamp.textContent = stampText;
+                stamp.title = `Jump to result ${index + 1} on page ${result.pageNumber}`;
+                
+                stamp.addEventListener('click', () => {
+                    currentSearchIndex = index;
+                    highlightSearchResult();
+                });
+                
+                stampsContainer.appendChild(stamp);
+            });
+            
+            searchStampsDiv.style.display = 'block';
+        }
+        
+        function updateActiveStamp() {
+            document.querySelectorAll('.search-stamp').forEach((stamp, index) => {
+                stamp.classList.toggle('active', index === currentSearchIndex);
+            });
+        }
+        
+        function hideSearchStamps() {
+            document.getElementById('search-stamps').style.display = 'none';
+        }
+        
+        function highlightTextInElement(element, query, activeIndex) {
+            clearSearch(); // Clear previous highlights
+            
+            const text = element.textContent;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            let highlightIndex = 0;
+            
+            const highlightedText = text.replace(regex, (match) => {
+                const isActive = highlightIndex === activeIndex;
+                highlightIndex++;
+                return `<span class="search-highlight ${isActive ? 'active' : ''}" style="background-color: ${isActive ? '#ff6b6b' : '#ffeb3b'}; padding: 2px;">${match}</span>`;
+            });
+            
+            element.innerHTML = highlightedText;
+        }
+        
+        function updateSearchUI() {
+            const searchPrev = document.getElementById('search-prev');
+            const searchNext = document.getElementById('search-next');
+            const searchResultsSpan = document.getElementById('search-results');
+            
+            if (searchResults.length > 0) {
+                searchPrev.disabled = false;
+                searchNext.disabled = false;
+                searchResultsSpan.textContent = `${currentSearchIndex + 1} of ${searchResults.length}`;
+            } else {
+                searchPrev.disabled = true;
+                searchNext.disabled = true;
+                const query = document.getElementById('search-input').value.trim();
+                searchResultsSpan.textContent = query.length >= 2 ? 'No results' : '';
+            }
+        }
+        
+        // Event listeners (navigation buttons are hidden but keeping for compatibility)
+        
+        document.getElementById('zoom-in').onclick = () => {
+            if (zoomLevel < 200) {
+                zoomLevel += 25;
+                updateZoom();
+            }
+        };
+        
+        document.getElementById('zoom-out').onclick = () => {
+            if (zoomLevel > 50) {
+                zoomLevel -= 25;
+                updateZoom();
+            }
+        };
+        
+        document.getElementById('fit-width').onclick = () => {
+            zoomLevel = 100;
+            updateZoom();
+        };
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '+' || e.key === '=') document.getElementById('zoom-in').click();
+            if (e.key === '-') document.getElementById('zoom-out').click();
+            // Arrow keys can be used for scrolling naturally
+        });
+        
+        // Load document on page load
+        loadDocument();
+    </script>
+</body>
+</html>

@@ -17,15 +17,15 @@
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card">
+        <div class="card stat-card fade-in-up">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Total Files</div>
-                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.total_files or 0) }}</div>
+                        <div class="h5 mb-0 font-weight-bold counter-number">{{ "{:,}".format(stats.total_files or 0) }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-file fa-2x"></i>
+                        <i class="fas fa-file fa-2x modern-icon"></i>
                     </div>
                 </div>
             </div>
@@ -33,15 +33,15 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card">
+        <div class="card stat-card fade-in-up" style="animation-delay: 0.1s;">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Total Links</div>
-                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.total_links or 0) }}</div>
+                        <div class="h5 mb-0 font-weight-bold counter-number">{{ "{:,}".format(stats.total_links or 0) }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-link fa-2x"></i>
+                        <i class="fas fa-link fa-2x modern-icon"></i>
                     </div>
                 </div>
             </div>
@@ -49,15 +49,15 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card bg-success text-white">
+        <div class="card modern-success-card fade-in-up" style="animation-delay: 0.2s;">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Files (24h)</div>
-                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.files_24h or 0) }}</div>
+                        <div class="h5 mb-0 font-weight-bold counter-number">{{ "{:,}".format(stats.files_24h or 0) }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-clock fa-2x"></i>
+                        <i class="fas fa-clock fa-2x modern-icon"></i>
                     </div>
                 </div>
             </div>
@@ -65,15 +65,15 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card bg-info text-white">
+        <div class="card modern-info-card fade-in-up" style="animation-delay: 0.3s;">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Links (24h)</div>
-                        <div class="h5 mb-0 font-weight-bold">{{ "{:,}".format(stats.links_24h or 0) }}</div>
+                        <div class="h5 mb-0 font-weight-bold counter-number">{{ "{:,}".format(stats.links_24h or 0) }}</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-clock fa-2x"></i>
+                        <i class="fas fa-clock fa-2x modern-icon"></i>
                     </div>
                 </div>
             </div>
@@ -238,4 +238,176 @@ setInterval(() => {
         });
 }, 30000);
 </script>
+
+<style>
+    /* Modern dashboard card styles */
+    .modern-success-card {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%);
+        color: var(--text-vibrant-blue);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
+    }
+    
+    .modern-info-card {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%);
+        color: var(--text-vibrant-blue);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s ease;
+    }
+    
+    .modern-success-card::before,
+    .modern-info-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transform: rotate(45deg);
+        animation: shimmer 3s infinite;
+    }
+    
+    .modern-success-card:hover,
+    .modern-info-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modern-icon {
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover .modern-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    .counter-number {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .counter-number::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.5);
+        transition: width 0.3s ease;
+    }
+    
+    .card:hover .counter-number::after {
+        width: 100%;
+    }
+    
+    /* Enhanced table styling */
+    .table {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .table thead th {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background: rgba(102, 126, 234, 0.05);
+        transform: scale(1.01);
+    }
+    
+    /* Progress bar enhancements */
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+        border-radius: 10px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: progressShine 2s infinite;
+    }
+    
+    @keyframes progressShine {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+    
+    /* Card header enhancements */
+    .card-header {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px 16px 0 0 !important;
+    }
+    
+    .card-header h6 {
+        margin: 0;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    /* Refresh button enhancement */
+    .btn-outline-secondary {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-outline-secondary::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-secondary:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .btn-outline-secondary i {
+        position: relative;
+        z-index: 2;
+        transition: transform 0.3s ease;
+    }
+    
+    .btn-outline-secondary:hover i {
+        transform: rotate(180deg);
+    }
+</style>
+
 {% endblock %}

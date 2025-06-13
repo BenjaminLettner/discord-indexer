@@ -10,6 +10,8 @@ from datetime import datetime
 import asyncio
 from urllib.parse import urlparse
 import aiohttp
+from ai_search_manager import AISearchManager
+from file_content_indexer import FileContentIndexer
 
 # Load configuration
 with open('config.json', 'r') as f:
@@ -33,6 +35,12 @@ intents.guilds = True
 intents.guild_messages = True
 
 bot = commands.Bot(command_prefix=config['discord']['command_prefix'], intents=intents)
+
+# Initialize AI Search Manager
+ai_manager = AISearchManager(config['database']['path'])
+
+# Initialize File Content Indexer
+content_indexer = FileContentIndexer(config['database']['path'])
 
 class DatabaseManager:
     def __init__(self, db_path):
@@ -72,12 +80,49 @@ class DatabaseManager:
                 message.content,
                 message.created_at
             ))
-            conn.commit()
-            logger.info(f"Indexed file: {attachment.filename} from message {message.id}")
+            
+            # Get the file ID for embedding generation
+            file_id = cursor.lastrowid
+            if file_id and cursor.rowcount > 0:  # Only if a new row was inserted
+                conn.commit()
+                logger.info(f"Indexed file: {attachment.filename} from message {message.id}")
+                
+                # Generate embedding asynchronously
+                try:
+                    ai_manager.generate_file_embedding(file_id)
+                    logger.info(f"Generated embedding for file ID: {file_id}")
+                except Exception as e:
+                    logger.error(f"Error generating embedding for file {file_id}: {e}")
+                
+                # Extract file content asynchronously
+                try:
+                    # Run content extraction in background to avoid blocking
+                    asyncio.create_task(self._extract_file_content_async(
+                        file_id, attachment.url, attachment.filename, attachment.content_type
+                    ))
+                except Exception as e:
+                    logger.error(f"Error starting content extraction for file {file_id}: {e}")
+            else:
+                conn.commit()
+                
         except Exception as e:
             logger.error(f"Error inserting file: {e}")
         finally:
             conn.close()
+    
+    async def _extract_file_content_async(self, file_id, file_url, filename, file_type):
+        """Extract file content asynchronously"""
+        try:
+            # Run content extraction in a thread to avoid blocking
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None, 
+                content_indexer.extract_file_content,
+                file_id, file_url, filename, file_type
+            )
+            logger.info(f"Content extraction completed for file: {filename}")
+        except Exception as e:
+            logger.error(f"Error in async content extraction for {filename}: {e}")
     
     def insert_link(self, message, url):
         """Insert a link into the database"""
@@ -106,8 +151,21 @@ class DatabaseManager:
                 message.content,
                 message.created_at
             ))
-            conn.commit()
-            logger.info(f"Indexed link: {url} from message {message.id}")
+            
+            # Get the link ID for embedding generation
+            link_id = cursor.lastrowid
+            if link_id and cursor.rowcount > 0:  # Only if a new row was inserted
+                conn.commit()
+                logger.info(f"Indexed link: {url} from message {message.id}")
+                
+                # Generate embedding asynchronously
+                try:
+                    ai_manager.generate_link_embedding(link_id)
+                    logger.info(f"Generated embedding for link ID: {link_id}")
+                except Exception as e:
+                    logger.error(f"Error generating embedding for link {link_id}: {e}")
+            else:
+                conn.commit()
         except Exception as e:
             logger.error(f"Error inserting link: {e}")
         finally:
@@ -311,6 +369,19 @@ async def daily_url_refresh():
     except Exception as e:
         logger.error(f"Error during daily URL refresh: {e}")
 
+@tasks.loop(hours=6)
+async def generate_missing_embeddings():
+    """Periodic task to generate embeddings for any files/links that don't have them"""
+    logger.info("Starting embedding generation for missing items...")
+    try:
+        results = ai_manager.generate_all_embeddings(batch_size=50)
+        if results['files_processed'] > 0 or results['links_processed'] > 0:
+            logger.info(f"Generated embeddings - Files: {results['files_processed']}, Links: {results['links_processed']}")
+        else:
+            logger.info("No missing embeddings found.")
+    except Exception as e:
+        logger.error(f"Error during embedding generation: {e}")
+
 @bot.event
 async def on_ready():
     logger.info(f'{bot.user} has connected to Discord!')
@@ -318,6 +389,10 @@ async def on_ready():
     # Start the daily URL refresh task
     if not daily_url_refresh.is_running():
         daily_url_refresh.start()
+    
+    # Start the embedding generation task
+    if not generate_missing_embeddings.is_running():
+        generate_missing_embeddings.start()
         logger.info("Started daily URL refresh task")
     
     # Sync slash commands

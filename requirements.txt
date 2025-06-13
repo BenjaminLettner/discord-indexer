@@ -7,3 +7,6 @@ requests==2.31.0
 werkzeug==2.3.7
 aiohttp
 preview-generator[all]==0.26
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+numpy==1.24.3

@@ -1,17 +1,11 @@
 #!/bin/bash
 
-# Simple startup script for Discord Indexer applications
-# This script starts the applications directly without systemd
+# Enhanced startup script for Discord Indexer applications
+# This script starts the applications and ensures embeddings are generated
 
 cd /root/discord-indexer
 
-echo "Starting Discord Indexer applications..."
-
-# Stop any existing processes first
-echo "Checking for existing processes..."
-./stop_apps.sh
-
-echo "Starting fresh instances..."
+echo "Starting Discord Indexer applications with AI Search..."
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
@@ -22,6 +16,10 @@ if [ ! -d "venv" ]; then
 else
     source venv/bin/activate
 fi
+
+# Generate embeddings for any missing items before starting services
+echo "Checking and generating missing embeddings..."
+python3 generate_embeddings.py
 
 # Start bot in background
 echo "Starting Discord bot..."
@@ -43,10 +41,12 @@ echo $BOT_PID > bot.pid
 echo $WEB_PID > web_app.pid
 
 echo ""
-echo "Discord Indexer started successfully!"
+echo "Discord Indexer started successfully with AI Search enabled!"
 echo "Bot PID: $BOT_PID (log: bot.log)"
 echo "Web App PID: $WEB_PID (log: web_app.log)"
 echo "Web interface available at: http://localhost:5000"
+echo "AI Search is ready with embeddings for existing content!"
 echo ""
 echo "To stop the applications, run: ./stop_apps.sh"
 echo "To check status, run: ./status_apps.sh"
+echo "To regenerate embeddings manually, run: python3 generate_embeddings.py"

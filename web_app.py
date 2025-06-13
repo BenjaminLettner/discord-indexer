@@ -12,8 +12,10 @@ from urllib.parse import urlparse
 import logging
 from user_manager import UserManager
 from discord_auth import DiscordOAuth2
+from ai_search_manager import AISearchManager
 import tempfile
 import io
+import base64
 from PIL import Image
 from pdf2image import convert_from_path
 import subprocess
@@ -494,6 +496,7 @@ class DatabaseManager:
 
 # Initialize managers
 db = DatabaseManager(config['database']['path'])
+ai_search = AISearchManager(config['database']['path'])
 user_manager = UserManager(config['database']['path'])
 
 @login_manager.user_loader
@@ -827,6 +830,190 @@ def links():
                          all_tags=all_tags,
                          selected_tags=request.args.getlist('tags'))
 
+@app.route('/ai-search')
+@login_required
+def ai_search_page():
+    """AI-powered search page"""
+    return render_template('ai_search.html')
+
+@app.route('/api/ai-search', methods=['POST'])
+@login_required
+def api_ai_search():
+    """API endpoint for AI-powered search"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '').strip()
+        limit = min(data.get('limit', 20), 50)  # Max 50 results
+        include_files = data.get('include_files', True)
+        include_links = data.get('include_links', True)
+        include_content = data.get('include_content', True)
+        
+        if not query:
+            return jsonify({'error': 'Query is required'}), 400
+        
+        # Perform AI search
+        results = ai_search.search(
+            query=query,
+            limit=limit,
+            include_files=include_files,
+            include_links=include_links,
+            include_content=include_content,
+            user_id=int(current_user.id)
+        )
+        
+        # Combine and sort results by similarity score
+        combined_results = []
+        for file_result in results['files']:
+            combined_results.append(file_result)
+        for link_result in results['links']:
+            combined_results.append(link_result)
+        
+        # Sort by similarity score (highest first)
+        combined_results.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        return jsonify({
+            'results': combined_results[:limit],
+            'total_files': len(results['files']),
+            'total_links': len(results['links']),
+            'query': query
+        })
+        
+    except Exception as e:
+        app.logger.error(f"AI search error: {e}")
+        return jsonify({'error': 'Search failed. Please try again.'}), 500
+
+@app.route('/api/ai-search/stats')
+@login_required
+def api_ai_search_stats():
+    """API endpoint for AI search statistics"""
+    try:
+        stats = ai_search.get_embedding_stats()
+        return jsonify(stats)
+    except Exception as e:
+        app.logger.error(f"AI search stats error: {e}")
+        return jsonify({'error': 'Failed to get stats'}), 500
+
+@app.route('/api/file_content/<int:file_id>', methods=['GET'])
+@login_required
+def api_get_file_content(file_id):
+    """Get file content for preview"""
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        
+        # Get file content from the file_content table
+        cursor.execute("""
+            SELECT fc.content_text, fc.extraction_method, fc.extracted_at,
+                   if.filename, if.file_type, if.file_size
+            FROM file_content fc
+            JOIN indexed_files if ON fc.file_id = if.id
+            WHERE fc.file_id = ?
+        """, (file_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return jsonify({'error': 'File content not found'}), 404
+        
+        content_text, extraction_method, extracted_at, filename, file_type, file_size = result
+        
+        # Get max_length parameter from request, default to 20000 characters
+        max_length = request.args.get('max_length', 20000, type=int)
+        # Cap the maximum to prevent memory issues
+        max_length = min(max_length, 100000)
+        
+        # Limit content length for preview
+        preview_content = content_text[:max_length] if content_text else ""
+        is_truncated = len(content_text) > max_length if content_text else False
+        
+        return jsonify({
+            'content': preview_content,
+            'is_truncated': is_truncated,
+            'full_length': len(content_text) if content_text else 0,
+            'extraction_method': extraction_method,
+            'extracted_at': extracted_at,
+            'filename': filename,
+            'file_type': file_type,
+            'file_size': file_size
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting file content: {e}")
+        return jsonify({'error': 'Failed to get file content'}), 500
+
+@app.route('/api/index_file_content', methods=['POST'])
+@login_required
+def api_index_file_content():
+    """Trigger file content indexing"""
+    try:
+        # Import here to avoid circular imports
+        from file_content_indexer import FileContentIndexer
+        
+        data = request.get_json()
+        file_id = data.get('file_id')
+        
+        if file_id:
+            # Index specific file
+            content_indexer = FileContentIndexer(config['database_path'])
+            
+            # Get file details from database
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, filename, file_url, file_type 
+                FROM indexed_files 
+                WHERE id = ?
+            """, (file_id,))
+            
+            file_data = cursor.fetchone()
+            conn.close()
+            
+            if not file_data:
+                return jsonify({'error': 'File not found'}), 404
+            
+            success = content_indexer.extract_file_content(
+                file_data[0], file_data[2], file_data[1], file_data[3]
+            )
+            
+            if success:
+                return jsonify({'message': f'Content indexed for file: {file_data[1]}'})
+            else:
+                return jsonify({'error': 'Failed to index file content'}), 500
+        else:
+            # Index all files
+            content_indexer = FileContentIndexer(config['database_path'])
+            indexed_count = content_indexer.index_all_files()
+            
+            return jsonify({
+                'message': f'Content indexing completed for {indexed_count} files'
+            })
+            
+    except Exception as e:
+        app.logger.error(f"Error in file content indexing: {e}")
+        return jsonify({'error': 'Content indexing failed'}), 500
+
+@app.route('/api/ai-search/generate-embeddings', methods=['POST'])
+@login_required
+def api_generate_embeddings():
+    """API endpoint to generate embeddings (admin only)"""
+    if not current_user.is_admin:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        # This is a long-running operation, so we'll do it in the background
+        # For now, we'll just return a success message
+        # In production, you might want to use Celery or similar for background tasks
+        result = ai_search.generate_all_embeddings(batch_size=50)
+        return jsonify({
+            'success': True,
+            'message': 'Embeddings generated successfully',
+            'stats': result
+        })
+    except Exception as e:
+        app.logger.error(f"Generate embeddings error: {e}")
+        return jsonify({'error': 'Failed to generate embeddings'}), 500
+
 @app.route('/api/stats')
 @login_required
 def api_stats():
@@ -1079,6 +1266,203 @@ def terms_of_service():
 def privacy_policy():
     """Privacy Policy page"""
     return render_template('privacy.html')
+
+@app.route('/document_viewer/<int:file_id>')
+@login_required
+def document_viewer(file_id):
+    """Render document viewer page"""
+    try:
+        # Get file information from database
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT if.filename, if.file_url, if.file_type, if.file_size,
+                   fc.content_text, fc.extraction_method
+            FROM indexed_files if
+            LEFT JOIN file_content fc ON if.id = fc.file_id
+            WHERE if.id = ?
+        ''', (file_id,))
+        file_data = cursor.fetchone()
+        conn.close()
+        
+        if not file_data:
+            flash('File not found', 'error')
+            return redirect(url_for('ai_search_page'))
+            
+        filename, file_url, file_type, file_size, content_text, extraction_method = file_data
+        
+        # Check if this is a document type that can be viewed
+        viewer_supported_types = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain',
+            'application/rtf',
+            'image/png',
+            'image/jpeg',
+            'image/jpg',
+            'image/gif',
+            'image/bmp',
+            'image/webp',
+            'image/svg+xml'
+        ]
+        
+        if file_type not in viewer_supported_types:
+            flash('Document viewer not supported for this file type', 'error')
+            return redirect(url_for('ai_search_page'))
+        
+        # Check for embedded mode and search parameters
+        embedded = request.args.get('embedded', 'false').lower() == 'true'
+        search_query = request.args.get('search', '')
+        
+        return render_template('document_viewer.html', 
+                             file_id=file_id,
+                             filename=filename,
+                             file_type=file_type,
+                             file_size=file_size,
+                             content_text=content_text,
+                             extraction_method=extraction_method,
+                             embedded=embedded,
+                             search_query=search_query)
+        
+    except Exception as e:
+        app.logger.error(f"Error in document_viewer for file {file_id}: {str(e)}")
+        flash('Error loading document viewer', 'error')
+        return redirect(url_for('ai_search_page'))
+
+@app.route('/api/document_pages/<int:file_id>')
+@login_required
+def api_document_pages(file_id):
+    """Get document pages as images for viewer"""
+    try:
+        # Get file information from database
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT filename, file_url, file_type FROM indexed_files WHERE id = ?', (file_id,))
+        file_data = cursor.fetchone()
+        conn.close()
+        
+        if not file_data:
+            return jsonify({'error': 'File not found'}), 404
+            
+        filename, file_url, file_type = file_data
+        
+        # Download the file temporarily
+        response = requests.get(file_url)
+        if response.status_code != 200:
+            return jsonify({'error': 'Could not download file'}), 400
+            
+        # Create temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1]) as temp_file:
+            temp_file.write(response.content)
+            temp_file_path = temp_file.name
+            
+        try:
+            pages = []
+            
+            if file_type.startswith('image/'):
+                # Handle image files directly
+                try:
+                    import base64
+                    with open(temp_file_path, 'rb') as img_file:
+                        img_data = img_file.read()
+                    img_base64 = base64.b64encode(img_data).decode('utf-8')
+                    
+                    # Determine the correct MIME type for the data URL
+                    mime_type = file_type
+                    pages.append({
+                        'page_number': 1,
+                        'image_data': f'data:{mime_type};base64,{img_base64}',
+                        'is_text': False
+                    })
+                except Exception as e:
+                    return jsonify({'error': f'Error processing image: {str(e)}'}), 500
+                    
+            elif file_type == 'application/pdf':
+                # Handle PDF files with pdf2image
+                try:
+                    images = convert_from_path(temp_file_path, dpi=150)
+                    for i, image in enumerate(images[:20]):  # Limit to first 20 pages
+                        img_io = io.BytesIO()
+                        image.save(img_io, 'JPEG', quality=85)
+                        img_io.seek(0)
+                        
+                        # Convert to base64 for JSON response
+                        import base64
+                        img_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+                        pages.append({
+                            'page_number': i + 1,
+                            'image_data': f'data:image/jpeg;base64,{img_base64}'
+                        })
+                except Exception as e:
+                    return jsonify({'error': f'Error converting PDF: {str(e)}'}), 500
+                    
+            elif file_type in ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+                # Handle Word documents by converting to PDF first, then to images
+                try:
+                    # Use LibreOffice to convert to PDF
+                    pdf_path = temp_file_path + '.pdf'
+                    result = subprocess.run([
+                        'libreoffice', '--headless', '--convert-to', 'pdf',
+                        '--outdir', os.path.dirname(temp_file_path), temp_file_path
+                    ], capture_output=True, text=True, timeout=30)
+                    
+                    if result.returncode == 0 and os.path.exists(pdf_path):
+                        images = convert_from_path(pdf_path, dpi=150)
+                        for i, image in enumerate(images[:20]):
+                            img_io = io.BytesIO()
+                            image.save(img_io, 'JPEG', quality=85)
+                            img_io.seek(0)
+                            
+                            import base64
+                            img_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+                            pages.append({
+                                'page_number': i + 1,
+                                'image_data': f'data:image/jpeg;base64,{img_base64}'
+                            })
+                        os.unlink(pdf_path)
+                except Exception as e:
+                    return jsonify({'error': f'Error converting document: {str(e)}'}), 500
+                    
+            elif file_type == 'text/plain':
+                # Handle text files by creating paginated text view
+                try:
+                    with open(temp_file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    
+                    # Split content into pages (approximately 3000 characters per page)
+                    page_size = 3000
+                    for i in range(0, len(content), page_size):
+                        page_content = content[i:i + page_size]
+                        pages.append({
+                            'page_number': (i // page_size) + 1,
+                            'text_content': page_content,
+                            'is_text': True
+                        })
+                        if len(pages) >= 20:  # Limit to 20 pages
+                            break
+                except Exception as e:
+                    return jsonify({'error': f'Error reading text file: {str(e)}'}), 500
+            
+            return jsonify({
+                'pages': pages,
+                'total_pages': len(pages),
+                'filename': filename,
+                'file_type': file_type
+            })
+                
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        app.logger.error(f"Error in api_document_pages for file {file_id}: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/preview/<int:file_id>')
 @login_required
