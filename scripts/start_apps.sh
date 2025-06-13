@@ -7,9 +7,9 @@ cd /root/discord-indexer
 
 echo "Starting Discord Indexer applications..."
 
-# Stop any existing processes first
-echo "Checking for existing processes..."
-./stop_apps.sh
+# Stop any existing processes first (including systemd services)
+echo "Stopping any existing processes..."
+scripts/stop_apps.sh
 
 echo "Starting fresh instances..."
 
@@ -25,7 +25,7 @@ fi
 
 # Start bot in background
 echo "Starting Discord bot..."
-nohup python3 bot.py > bot.log 2>&1 &
+nohup python3 src/bot.py > logs/bot.log 2>&1 &
 BOT_PID=$!
 echo "Bot started with PID: $BOT_PID"
 
@@ -34,7 +34,7 @@ sleep 2
 
 # Start web app in background
 echo "Starting web application..."
-nohup python3 web_app.py > web_app.log 2>&1 &
+nohup python3 src/web_app.py > logs/web_app.log 2>&1 &
 WEB_PID=$!
 echo "Web app started with PID: $WEB_PID"
 
@@ -44,9 +44,9 @@ echo $WEB_PID > web_app.pid
 
 echo ""
 echo "Discord Indexer started successfully!"
-echo "Bot PID: $BOT_PID (log: bot.log)"
-echo "Web App PID: $WEB_PID (log: web_app.log)"
+echo "Bot PID: $BOT_PID (log: logs/bot.log)"
+echo "Web App PID: $WEB_PID (log: logs/web_app.log)"
 echo "Web interface available at: http://localhost:5000"
 echo ""
-echo "To stop the applications, run: ./stop_apps.sh"
-echo "To check status, run: ./status_apps.sh"
+echo "To stop the applications, run: scripts/stop_apps.sh"
+echo "To check status, run: scripts/status_apps.sh"

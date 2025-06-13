@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Configuration</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-cogs"></i> Configuration Management</h1>
+                <div>
+                    <button type="button" class="btn btn-warning" onclick="resetToDefaults()">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
+                    <button type="submit" form="configForm" class="btn btn-success">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <form id="configForm" method="POST" action="{{ url_for('admin_config_update') }}">
+        <div class="row">
+            <!-- Discord Bot Configuration -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fab fa-discord"></i> Discord Bot Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="bot_token" class="form-label">Bot Token</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="bot_token" name="bot_token" 
+                                       value="{{ config.bot_token or '' }}" placeholder="Enter Discord bot token">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('bot_token')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Your Discord bot token for API access</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="guild_id" class="form-label">Guild ID</label>
+                            <input type="text" class="form-control" id="guild_id" name="guild_id" 
+                                   value="{{ config.guild_id or '' }}" placeholder="Discord server ID">
+                            <div class="form-text">The Discord server ID to index</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="channels" class="form-label">Channel IDs</label>
+                            <textarea class="form-control" id="channels" name="channels" rows="3" 
+                                      placeholder="Enter channel IDs, one per line">{% if config.channels %}{% for channel in config.channels %}{{ channel }}
+{% endfor %}{% endif %}</textarea>
+                            <div class="form-text">Channel IDs to monitor (one per line)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Database Configuration -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-database"></i> Database Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="db_path" class="form-label">Database Path</label>
+                            <input type="text" class="form-control" id="db_path" name="db_path" 
+                                   value="{{ config.db_path or '' }}" placeholder="Path to SQLite database">
+                            <div class="form-text">Path to the SQLite database file</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="backup_enabled" class="form-label">Database Backup</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="backup_enabled" name="backup_enabled" 
+                                       {% if config.backup_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="backup_enabled">
+                                    Enable automatic database backups
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="backup_interval" class="form-label">Backup Interval (hours)</label>
+                            <input type="number" class="form-control" id="backup_interval" name="backup_interval" 
+                                   value="{{ config.backup_interval or 24 }}" min="1" max="168">
+                            <div class="form-text">How often to create backups (1-168 hours)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Web Application Settings -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-globe"></i> Web Application</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="web_host" class="form-label">Host</label>
+                            <input type="text" class="form-control" id="web_host" name="web_host" 
+                                   value="{{ config.web_host or '0.0.0.0' }}" placeholder="0.0.0.0">
+                            <div class="form-text">Web server host address</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="web_port" class="form-label">Port</label>
+                            <input type="number" class="form-control" id="web_port" name="web_port" 
+                                   value="{{ config.web_port or 5000 }}" min="1" max="65535">
+                            <div class="form-text">Web server port (1-65535)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="secret_key" class="form-label">Secret Key</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="secret_key" name="secret_key" 
+                                       value="{{ config.secret_key or '' }}" placeholder="Flask secret key">
+                                <button class="btn btn-outline-secondary" type="button" onclick="generateSecretKey()">
+                                    <i class="fas fa-random"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('secret_key')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Flask application secret key</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Security Settings -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Security Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="max_file_size" class="form-label">Max File Size (MB)</label>
+                            <input type="number" class="form-control" id="max_file_size" name="max_file_size" 
+                                   value="{{ config.max_file_size or 50 }}" min="1" max="1000">
+                            <div class="form-text">Maximum file size for uploads (1-1000 MB)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="session_timeout" class="form-label">Session Timeout (minutes)</label>
+                            <input type="number" class="form-control" id="session_timeout" name="session_timeout" 
+                                   value="{{ config.session_timeout or 60 }}" min="5" max="1440">
+                            <div class="form-text">User session timeout (5-1440 minutes)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rate_limit" class="form-label">Rate Limit (requests/minute)</label>
+                            <input type="number" class="form-control" id="rate_limit" name="rate_limit" 
+                                   value="{{ config.rate_limit or 100 }}" min="10" max="1000">
+                            <div class="form-text">API rate limit per user (10-1000 requests/minute)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logging Configuration -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-file-alt"></i> Logging Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="log_level" class="form-label">Log Level</label>
+                                    <select class="form-select" id="log_level" name="log_level">
+                                        <option value="DEBUG" {% if config.log_level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                        <option value="INFO" {% if config.log_level == 'INFO' or not config.log_level %}selected{% endif %}>INFO</option>
+                                        <option value="WARNING" {% if config.log_level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                        <option value="ERROR" {% if config.log_level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                                    </select>
+                                    <div class="form-text">Minimum log level to record</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="log_file" class="form-label">Log File Path</label>
+                                    <input type="text" class="form-control" id="log_file" name="log_file" 
+                                           value="{{ config.log_file or '' }}" placeholder="Path to log file">
+                                    <div class="form-text">Path to the application log file</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="log_rotation" class="form-label">Log Rotation</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="log_rotation" name="log_rotation" 
+                                               {% if config.log_rotation %}checked{% endif %}>
+                                        <label class="form-check-label" for="log_rotation">
+                                            Enable log file rotation
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Automatically rotate log files</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = field.nextElementSibling;
+    const icon = button.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function generateSecretKey() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('secret_key').value = result;
+}
+
+function resetToDefaults() {
+    if (confirm('Are you sure you want to reset all configuration to default values? This action cannot be undone.')) {
+        // Reset form to default values
+        document.getElementById('configForm').reset();
+        
+        // Set specific default values
+        document.getElementById('web_host').value = '0.0.0.0';
+        document.getElementById('web_port').value = '5000';
+        document.getElementById('max_file_size').value = '50';
+        document.getElementById('session_timeout').value = '60';
+        document.getElementById('rate_limit').value = '100';
+        document.getElementById('backup_interval').value = '24';
+        document.getElementById('log_level').value = 'INFO';
+        
+        // Generate new secret key
+        generateSecretKey();
+    }
+}
+
+// Form validation
+document.getElementById('configForm').addEventListener('submit', function(e) {
+    const botToken = document.getElementById('bot_token').value;
+    const guildId = document.getElementById('guild_id').value;
+    
+    if (!botToken.trim()) {
+        alert('Bot token is required!');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!guildId.trim()) {
+        alert('Guild ID is required!');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!/^\d+$/.test(guildId)) {
+        alert('Guild ID must be a valid Discord server ID (numbers only)!');
+        e.preventDefault();
+        return;
+    }
+});
+</script>
+{% endblock %}

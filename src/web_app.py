@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import logging
 from user_manager import UserManager
 from discord_auth import DiscordOAuth2
-from ai_search_manager import AISearchManager
+
 import tempfile
 import io
 import base64
@@ -21,10 +21,10 @@ from pdf2image import convert_from_path
 import subprocess
 
 # Load configuration
-with open('config.json', 'r') as f:
+with open('config/config.json', 'r') as f:
     config = json.load(f)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = config['web']['secret_key']
 
 # Set logging level to INFO to capture debug messages
@@ -496,7 +496,6 @@ class DatabaseManager:
 
 # Initialize managers
 db = DatabaseManager(config['database']['path'])
-ai_search = AISearchManager(config['database']['path'])
 user_manager = UserManager(config['database']['path'])
 
 @login_manager.user_loader
@@ -632,10 +631,7 @@ def logout():
 @login_required
 def profile():
     """User profile page"""
-    users = []
-    if current_user.is_admin:
-        users = user_manager.get_all_users()
-    return render_template('profile.html', users=users)
+    return render_template('profile.html')
 
 @app.route('/update_profile', methods=['POST'])
 @login_required
@@ -673,13 +669,218 @@ def change_password():
     
     return redirect(url_for('profile'))
 
+
+
+# Admin Dashboard Routes
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    """Admin dashboard page"""
+    if not current_user.is_admin:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get system stats
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    
+    # Get total user count
+    cursor.execute('SELECT COUNT(*) FROM users')
+    total_users = cursor.fetchone()[0]
+    
+    # Get active user count (users who have logged in at least once)
+    cursor.execute("SELECT COUNT(*) FROM users WHERE last_login IS NOT NULL")
+    active_users = cursor.fetchone()[0]
+    
+    # Get admin user count
+    cursor.execute('SELECT COUNT(*) FROM users WHERE is_admin = 1')
+    admin_users = cursor.fetchone()[0]
+    
+    # Get file count
+    cursor.execute('SELECT COUNT(*) FROM indexed_files')
+    total_files = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    stats = {
+        'total_users': total_users,
+        'active_users': active_users,
+        'admin_users': admin_users,
+        'total_files': total_files
+    }
+    
+    return render_template('admin_dashboard.html', stats=stats)
+
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    """Admin user management page"""
+    if not current_user.is_admin:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+    
+    users = user_manager.get_all_users()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/admin/config')
+@login_required
+def admin_config():
+    """Admin configuration page"""
+    if not current_user.is_admin:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Load current configuration
+        with open('/root/discord-indexer/config/config.json', 'r') as f:
+            current_config = json.load(f)
+        
+        # Map config structure to template expectations
+        config_data = {
+            'bot_token': current_config.get('discord', {}).get('token', ''),
+            'guild_id': current_config.get('discord', {}).get('guild_id', ''),
+            'channels': current_config.get('discord', {}).get('channels', []),
+            'db_path': current_config.get('database', {}).get('path', ''),
+            'backup_enabled': current_config.get('database', {}).get('backup_enabled', False),
+            'backup_interval': current_config.get('database', {}).get('backup_interval', 24),
+            'web_host': current_config.get('web', {}).get('host', '0.0.0.0'),
+            'web_port': current_config.get('web', {}).get('port', 5000),
+            'secret_key': current_config.get('web', {}).get('secret_key', ''),
+            'max_file_size': current_config.get('web', {}).get('max_file_size', 50),
+            'session_timeout': current_config.get('auth', {}).get('session_timeout', 3600) // 60,  # Convert to minutes
+            'rate_limit': current_config.get('web', {}).get('rate_limit', 100),
+            'log_level': current_config.get('logging', {}).get('level', 'INFO'),
+            'log_file': current_config.get('logging', {}).get('file', ''),
+            'log_rotation': current_config.get('logging', {}).get('backup_count', 0) > 0
+        }
+        
+        return render_template('admin_config.html', config=config_data)
+    except Exception as e:
+        flash(f'Error loading configuration: {str(e)}', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/config/update', methods=['POST'])
+@login_required
+def admin_config_update():
+    """Update configuration"""
+    if not current_user.is_admin:
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Load current config
+        with open('/root/discord-indexer/config/config.json', 'r') as f:
+            current_config = json.load(f)
+        
+        # Update Discord settings
+        if 'bot_token' in request.form:
+            if 'discord' not in current_config:
+                current_config['discord'] = {}
+            current_config['discord']['token'] = request.form['bot_token']
+        
+        if 'guild_id' in request.form:
+            if 'discord' not in current_config:
+                current_config['discord'] = {}
+            guild_id = request.form['guild_id'].strip()
+            current_config['discord']['guild_id'] = guild_id if guild_id else None
+        
+        if 'channels' in request.form:
+            if 'discord' not in current_config:
+                current_config['discord'] = {}
+            channels_text = request.form['channels'].strip()
+            if channels_text:
+                channels = [ch.strip() for ch in channels_text.split('\n') if ch.strip()]
+                current_config['discord']['channels'] = channels
+            else:
+                current_config['discord']['channels'] = []
+        
+        # Update database settings
+        if 'db_path' in request.form:
+            if 'database' not in current_config:
+                current_config['database'] = {}
+            current_config['database']['path'] = request.form['db_path']
+        
+        if 'backup_enabled' in request.form:
+            if 'database' not in current_config:
+                current_config['database'] = {}
+            current_config['database']['backup_enabled'] = request.form.get('backup_enabled') == 'on'
+        
+        if 'backup_interval' in request.form:
+            if 'database' not in current_config:
+                current_config['database'] = {}
+            current_config['database']['backup_interval'] = int(request.form['backup_interval'])
+        
+        # Update web settings
+        if 'web_host' in request.form:
+            if 'web' not in current_config:
+                current_config['web'] = {}
+            current_config['web']['host'] = request.form['web_host']
+        
+        if 'web_port' in request.form:
+            if 'web' not in current_config:
+                current_config['web'] = {}
+            current_config['web']['port'] = int(request.form['web_port'])
+        
+        if 'secret_key' in request.form:
+            if 'web' not in current_config:
+                current_config['web'] = {}
+            current_config['web']['secret_key'] = request.form['secret_key']
+        
+        if 'max_file_size' in request.form:
+            if 'web' not in current_config:
+                current_config['web'] = {}
+            current_config['web']['max_file_size'] = int(request.form['max_file_size'])
+        
+        if 'rate_limit' in request.form:
+            if 'web' not in current_config:
+                current_config['web'] = {}
+            current_config['web']['rate_limit'] = int(request.form['rate_limit'])
+        
+        # Update auth settings
+        if 'session_timeout' in request.form:
+            if 'auth' not in current_config:
+                current_config['auth'] = {}
+            # Convert minutes to seconds
+            current_config['auth']['session_timeout'] = int(request.form['session_timeout']) * 60
+        
+        # Update logging settings
+        if 'log_level' in request.form:
+            if 'logging' not in current_config:
+                current_config['logging'] = {}
+            current_config['logging']['level'] = request.form['log_level']
+        
+        if 'log_file' in request.form:
+            if 'logging' not in current_config:
+                current_config['logging'] = {}
+            current_config['logging']['file'] = request.form['log_file']
+        
+        if 'log_rotation' in request.form:
+             if 'logging' not in current_config:
+                 current_config['logging'] = {}
+             # Set backup_count based on log_rotation checkbox
+             current_config['logging']['backup_count'] = 5 if request.form.get('log_rotation') == 'on' else 0
+        
+        # Save updated config
+        with open('/root/discord-indexer/config/config.json', 'w') as f:
+            json.dump(current_config, f, indent=4)
+        
+        flash('Configuration updated successfully!', 'success')
+        return redirect(url_for('admin_config'))
+    
+    except Exception as e:
+        flash(f'Error updating configuration: {str(e)}', 'error')
+        return redirect(url_for('admin_config'))
+
+
+# User management routes are defined later in the file
+
 @app.route('/add_user', methods=['POST'])
 @login_required
 def add_user():
     """Add new user (admin only)"""
     if not current_user.is_admin:
         flash('Access denied', 'error')
-        return redirect(url_for('profile'))
+        return redirect(url_for('admin_users'))
     
     username = request.form['username']
     email = request.form.get('email')
@@ -688,14 +889,14 @@ def add_user():
     
     if len(password) < 6:
         flash('Password must be at least 6 characters long', 'error')
-        return redirect(url_for('profile'))
+        return redirect(url_for('admin_users'))
     
     if user_manager.create_user(username, password, email, is_admin):
         flash(f'User {username} created successfully', 'success')
     else:
         flash('Failed to create user. Username may already exist.', 'error')
     
-    return redirect(url_for('profile'))
+    return redirect(url_for('admin_users'))
 
 @app.route('/toggle_user_status/<int:user_id>', methods=['POST'])
 @login_required
@@ -703,7 +904,7 @@ def toggle_user_status(user_id):
     """Toggle user active status (admin only)"""
     if not current_user.is_admin:
         flash('Access denied', 'error')
-        return redirect(url_for('profile'))
+        return redirect(url_for('admin_users'))
     
     user_data = user_manager.get_user_by_id(user_id)
     if user_data:
@@ -716,7 +917,7 @@ def toggle_user_status(user_id):
     else:
         flash('User not found', 'error')
     
-    return redirect(url_for('profile'))
+    return redirect(url_for('admin_users'))
 
 @app.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
@@ -724,7 +925,7 @@ def delete_user(user_id):
     """Delete user (admin only)"""
     if not current_user.is_admin:
         flash('Access denied', 'error')
-        return redirect(url_for('profile'))
+        return redirect(url_for('admin_users'))
     
     user_data = user_manager.get_user_by_id(user_id)
     if user_data:
@@ -735,7 +936,7 @@ def delete_user(user_id):
     else:
         flash('User not found', 'error')
     
-    return redirect(url_for('profile'))
+    return redirect(url_for('admin_users'))
 
 @app.route('/toggle_user_admin/<int:user_id>', methods=['POST'])
 @login_required
@@ -743,7 +944,7 @@ def toggle_user_admin(user_id):
     """Toggle user admin status (admin only)"""
     if not current_user.is_admin:
         flash('Access denied', 'error')
-        return redirect(url_for('profile'))
+        return redirect(url_for('admin_users'))
     
     user_data = user_manager.get_user_by_id(user_id)
     if user_data:
@@ -756,7 +957,7 @@ def toggle_user_admin(user_id):
     else:
         flash('User not found', 'error')
     
-    return redirect(url_for('profile'))
+    return redirect(url_for('admin_users'))
 
 @app.route('/files')
 @login_required
@@ -830,189 +1031,23 @@ def links():
                          all_tags=all_tags,
                          selected_tags=request.args.getlist('tags'))
 
-@app.route('/ai-search')
-@login_required
-def ai_search_page():
-    """AI-powered search page"""
-    return render_template('ai_search.html')
 
-@app.route('/api/ai-search', methods=['POST'])
-@login_required
-def api_ai_search():
-    """API endpoint for AI-powered search"""
-    try:
-        data = request.get_json()
-        query = data.get('query', '').strip()
-        limit = min(data.get('limit', 20), 50)  # Max 50 results
-        include_files = data.get('include_files', True)
-        include_links = data.get('include_links', True)
-        include_content = data.get('include_content', True)
-        
-        if not query:
-            return jsonify({'error': 'Query is required'}), 400
-        
-        # Perform AI search
-        results = ai_search.search(
-            query=query,
-            limit=limit,
-            include_files=include_files,
-            include_links=include_links,
-            include_content=include_content,
-            user_id=int(current_user.id)
-        )
-        
-        # Combine and sort results by similarity score
-        combined_results = []
-        for file_result in results['files']:
-            combined_results.append(file_result)
-        for link_result in results['links']:
-            combined_results.append(link_result)
-        
-        # Sort by similarity score (highest first)
-        combined_results.sort(key=lambda x: x['similarity_score'], reverse=True)
-        
-        return jsonify({
-            'results': combined_results[:limit],
-            'total_files': len(results['files']),
-            'total_links': len(results['links']),
-            'query': query
-        })
-        
-    except Exception as e:
-        app.logger.error(f"AI search error: {e}")
-        return jsonify({'error': 'Search failed. Please try again.'}), 500
 
-@app.route('/api/ai-search/stats')
-@login_required
-def api_ai_search_stats():
-    """API endpoint for AI search statistics"""
-    try:
-        stats = ai_search.get_embedding_stats()
-        return jsonify(stats)
-    except Exception as e:
-        app.logger.error(f"AI search stats error: {e}")
-        return jsonify({'error': 'Failed to get stats'}), 500
 
-@app.route('/api/file_content/<int:file_id>', methods=['GET'])
-@login_required
-def api_get_file_content(file_id):
-    """Get file content for preview"""
-    try:
-        conn = db.get_connection()
-        cursor = conn.cursor()
-        
-        # Get file content from the file_content table
-        cursor.execute("""
-            SELECT fc.content_text, fc.extraction_method, fc.extracted_at,
-                   if.filename, if.file_type, if.file_size
-            FROM file_content fc
-            JOIN indexed_files if ON fc.file_id = if.id
-            WHERE fc.file_id = ?
-        """, (file_id,))
-        
-        result = cursor.fetchone()
-        conn.close()
-        
-        if not result:
-            return jsonify({'error': 'File content not found'}), 404
-        
-        content_text, extraction_method, extracted_at, filename, file_type, file_size = result
-        
-        # Get max_length parameter from request, default to 20000 characters
-        max_length = request.args.get('max_length', 20000, type=int)
-        # Cap the maximum to prevent memory issues
-        max_length = min(max_length, 100000)
-        
-        # Limit content length for preview
-        preview_content = content_text[:max_length] if content_text else ""
-        is_truncated = len(content_text) > max_length if content_text else False
-        
-        return jsonify({
-            'content': preview_content,
-            'is_truncated': is_truncated,
-            'full_length': len(content_text) if content_text else 0,
-            'extraction_method': extraction_method,
-            'extracted_at': extracted_at,
-            'filename': filename,
-            'file_type': file_type,
-            'file_size': file_size
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Error getting file content: {e}")
-        return jsonify({'error': 'Failed to get file content'}), 500
 
-@app.route('/api/index_file_content', methods=['POST'])
-@login_required
-def api_index_file_content():
-    """Trigger file content indexing"""
-    try:
-        # Import here to avoid circular imports
-        from file_content_indexer import FileContentIndexer
-        
-        data = request.get_json()
-        file_id = data.get('file_id')
-        
-        if file_id:
-            # Index specific file
-            content_indexer = FileContentIndexer(config['database_path'])
-            
-            # Get file details from database
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT id, filename, file_url, file_type 
-                FROM indexed_files 
-                WHERE id = ?
-            """, (file_id,))
-            
-            file_data = cursor.fetchone()
-            conn.close()
-            
-            if not file_data:
-                return jsonify({'error': 'File not found'}), 404
-            
-            success = content_indexer.extract_file_content(
-                file_data[0], file_data[2], file_data[1], file_data[3]
-            )
-            
-            if success:
-                return jsonify({'message': f'Content indexed for file: {file_data[1]}'})
-            else:
-                return jsonify({'error': 'Failed to index file content'}), 500
-        else:
-            # Index all files
-            content_indexer = FileContentIndexer(config['database_path'])
-            indexed_count = content_indexer.index_all_files()
-            
-            return jsonify({
-                'message': f'Content indexing completed for {indexed_count} files'
-            })
-            
-    except Exception as e:
-        app.logger.error(f"Error in file content indexing: {e}")
-        return jsonify({'error': 'Content indexing failed'}), 500
 
-@app.route('/api/ai-search/generate-embeddings', methods=['POST'])
-@login_required
-def api_generate_embeddings():
-    """API endpoint to generate embeddings (admin only)"""
-    if not current_user.is_admin:
-        return jsonify({'error': 'Access denied'}), 403
-    
-    try:
-        # This is a long-running operation, so we'll do it in the background
-        # For now, we'll just return a success message
-        # In production, you might want to use Celery or similar for background tasks
-        result = ai_search.generate_all_embeddings(batch_size=50)
-        return jsonify({
-            'success': True,
-            'message': 'Embeddings generated successfully',
-            'stats': result
-        })
-    except Exception as e:
-        app.logger.error(f"Generate embeddings error: {e}")
-        return jsonify({'error': 'Failed to generate embeddings'}), 500
+
+
+
+
+
+
+
+
+
+
+
+
 
 @app.route('/api/stats')
 @login_required
@@ -1276,20 +1311,18 @@ def document_viewer(file_id):
         conn = db.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT if.filename, if.file_url, if.file_type, if.file_size,
-                   fc.content_text, fc.extraction_method
-            FROM indexed_files if
-            LEFT JOIN file_content fc ON if.id = fc.file_id
-            WHERE if.id = ?
+            SELECT filename, file_url, file_type, file_size
+            FROM indexed_files
+            WHERE id = ?
         ''', (file_id,))
         file_data = cursor.fetchone()
         conn.close()
         
         if not file_data:
             flash('File not found', 'error')
-            return redirect(url_for('ai_search_page'))
+            return redirect(url_for('files'))
             
-        filename, file_url, file_type, file_size, content_text, extraction_method = file_data
+        filename, file_url, file_type, file_size = file_data
         
         # Check if this is a document type that can be viewed
         viewer_supported_types = [
@@ -1313,7 +1346,7 @@ def document_viewer(file_id):
         
         if file_type not in viewer_supported_types:
             flash('Document viewer not supported for this file type', 'error')
-            return redirect(url_for('ai_search_page'))
+            return redirect(url_for('files'))
         
         # Check for embedded mode and search parameters
         embedded = request.args.get('embedded', 'false').lower() == 'true'
@@ -1324,15 +1357,13 @@ def document_viewer(file_id):
                              filename=filename,
                              file_type=file_type,
                              file_size=file_size,
-                             content_text=content_text,
-                             extraction_method=extraction_method,
                              embedded=embedded,
                              search_query=search_query)
         
     except Exception as e:
         app.logger.error(f"Error in document_viewer for file {file_id}: {str(e)}")
         flash('Error loading document viewer', 'error')
-        return redirect(url_for('ai_search_page'))
+        return redirect(url_for('files'))
 
 @app.route('/api/document_pages/<int:file_id>')
 @login_required

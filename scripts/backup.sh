@@ -10,7 +10,7 @@ mkdir -p $BACKUP_DIR
 cp /root/discord-indexer/indexer.db $BACKUP_DIR/indexer_$DATE.db
 
 # Backup configuration
-cp /root/discord-indexer/config.json $BACKUP_DIR/config_$DATE.json
+cp /root/discord-indexer/config/config.json $BACKUP_DIR/config_$DATE.json
 
 # Keep only last 7 days of backups
 find $BACKUP_DIR -name "*.db" -mtime +7 -delete

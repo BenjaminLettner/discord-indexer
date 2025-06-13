@@ -4,7 +4,7 @@ import json
 from discord_auth import DiscordOAuth2
 
 # Load config
-with open('config.json', 'r') as f:
+with open('config/config.json', 'r') as f:
     config = json.load(f)
 
 # Filter out 'enabled' field

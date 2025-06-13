@@ -45,8 +45,8 @@ pip install werkzeug==2.3.7
 
 # Make scripts executable
 echo "🔐 Setting permissions..."
-chmod +x bot.py
-chmod +x web_app.py
+chmod +x src/bot.py
+chmod +x src/web_app.py
 chmod +x setup_db.py
 chmod +x install.sh
 
@@ -125,7 +125,7 @@ mkdir -p $BACKUP_DIR
 cp /root/discord-indexer/indexer.db $BACKUP_DIR/indexer_$DATE.db
 
 # Backup configuration
-cp /root/discord-indexer/config.json $BACKUP_DIR/config_$DATE.json
+cp /root/discord-indexer/config/config.json $BACKUP_DIR/config_$DATE.json
 
 # Keep only last 7 days of backups
 find $BACKUP_DIR -name "*.db" -mtime +7 -delete
@@ -144,8 +144,8 @@ echo ""
 echo "✅ Installation completed successfully!"
 echo ""
 echo "📋 Next steps:"
-echo "1. Edit /root/discord-indexer/config.json and add your Discord bot token"
-echo "2. Change the default username/password in config.json"
+echo "1. Edit /root/discord-indexer/config/config.json and add your Discord bot token"
+echo "2. Change the default username/password in config/config.json"
 echo "3. Start the services:"
 echo "   systemctl start discord-indexer-bot"
 echo "   systemctl start discord-indexer-web"

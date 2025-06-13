@@ -41,7 +41,7 @@ def setup_users_table(db_path):
     
     # Load current config to get existing admin credentials
     try:
-        with open('config.json', 'r') as f:
+        with open('config/config.json', 'r') as f:
             config = json.load(f)
         admin_username = config['auth']['username']
         admin_password = config['auth']['password']
@@ -69,7 +69,7 @@ def setup_users_table(db_path):
 if __name__ == '__main__':
     # Load database path from config
     try:
-        with open('config.json', 'r') as f:
+        with open('config/config.json', 'r') as f:
             config = json.load(f)
         db_path = config['database']['path']
     except:

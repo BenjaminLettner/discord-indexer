@@ -1427,12 +1427,13 @@
                                 <i class="fas fa-link"></i> Links
                             </a>
                         </li>
+
+                        {% if current_user.is_admin %}
                         <li class="nav-item">
-                            <a class="nav-link {{ 'active' if request.endpoint == 'ai_search_page' }}" href="{{ url_for('ai_search_page') }}">
-                                <i class="fas fa-robot"></i> AI Search
+                            <a class="nav-link {{ 'active' if request.endpoint == 'admin_dashboard' or request.endpoint.startswith('admin_') }}" href="{{ url_for('admin_dashboard') }}">
+                                <i class="fas fa-cogs"></i> Admin Dashboard
                             </a>
                         </li>
-                        {% if current_user.is_admin %}
                         <li class="nav-item">
                             <a class="nav-link {{ 'active' if request.endpoint == 'manage_tags' }}" href="{{ url_for('manage_tags') }}">
                                 <i class="fas fa-tags"></i> Tags

@@ -1,5 +1,5 @@
 [Unit]
-Description=Discord Indexer Bot
+Description=Discord Indexer Web Interface
 After=network.target
 Wants=network.target
 
@@ -8,12 +8,14 @@ Type=simple
 User=root
 WorkingDirectory=/root/discord-indexer
 Environment=PYTHONPATH=/root/discord-indexer
-ExecStart=/root/discord-indexer/venv/bin/python /root/discord-indexer/bot.py
+Environment=FLASK_APP=src/web_app.py
+Environment=FLASK_ENV=production
+ExecStart=/root/discord-indexer/venv/bin/python /root/discord-indexer/src/web_app.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=discord-indexer-bot
+SyslogIdentifier=discord-indexer-web
 
 # Security settings
 NoNewPrivileges=true

@@ -23,16 +23,15 @@ Edit `config.json` and update:
 
 ### 3. Start Everything
 ```bash
-./start_apps_with_embeddings.sh
+./start_apps.sh
 ```
 
-### AI Search Setup
+### Search Setup
 
-The AI Search functionality is now **automatically integrated**:
-- New files and links get embeddings generated immediately when indexed
-- Existing content gets embeddings generated on startup
-- Background task runs every 6 hours to catch any missed items
-- Manual embedding updates available via `./update_embeddings.sh`
+The search functionality is automatically available:
+- All indexed content is searchable through the web interface
+- Text-based search works across file contents and metadata
+- Search results are displayed with relevant context
 
 That's it! Your Discord indexer is now running.
 
